@@ -47,8 +47,9 @@ body {
 header,
 main,
 footer {
-  max-width: 44rem;
-  margin: 0 auto;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* --- top navigation ---------------------------------------- */
@@ -56,7 +57,7 @@ footer {
 header {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 0.5rem 1.5rem;
   padding: 2rem 0 1.5rem;
   border-bottom: 1px solid var(--line);
@@ -71,10 +72,13 @@ header .site-name {
   margin-right: auto;
 }
 
+header nav {
+  margin-left: auto;
+}
 header nav a {
-  color: var(--muted);
+  color: var(--ink);
   text-decoration: none;
-  margin-left: 1.25rem;
+  margin-left: 4rem;
 }
 
 header nav a:hover {
@@ -163,7 +167,14 @@ canvas {
 
 footer {
   margin-top: 4rem;
-  padding-top: 1.5rem;
+  background-image: url("Background.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 0.9rem;
