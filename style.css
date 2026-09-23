@@ -68,7 +68,7 @@ header .site-name {
   font-size: 1.15rem;
   font-weight: 700;
   text-decoration: none;
-  color: var(--ink);
+  color: rgb(119, 0, 119);
   margin-right: auto;
 }
 
