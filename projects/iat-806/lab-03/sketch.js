@@ -27,7 +27,7 @@ let sounds = [];
 let soundIndex = 0;
 
 //the soundtrack which is currently playing
-let currentSound = -1;
+let currentSound = 0;
 
 async function setup() {
   createCanvas(600, 600);
@@ -56,7 +56,6 @@ function draw() {
   // Animating the dogs on floor
 
   let speed = 20;
-
   // Fast techno
   if (currentSound == 0) {
     speed = 7;
@@ -110,8 +109,7 @@ function draw() {
     }
   }
 
-  // Draw each dog
-
+  // Drawing each dog with image function
   image(frames[dog1Frame], 100, 400, 100, 100);
   image(frames1[dog2Frame], 300, 400, 110, 110);
   image(frames2[dog3Frame], 400, 400, 110, 110);
@@ -129,8 +127,6 @@ function draw() {
 
   // POODLE SONG
   if (currentSound == 3) {
-    // Colorful party lights
-
     // Poodle enters from the right
     if (poodleX > 225) {
       poodleX = poodleX - 3;
@@ -138,6 +134,7 @@ function draw() {
     image(frames6[poodleFrame], poodleX, 200, 150, 150);
   }
 
+  // Have the chow chow outside of the dance floor when sound 0, 1 is playing
   if (currentSound != 2) {
     chowX = -150;
   }
@@ -151,7 +148,7 @@ function mousePressed() {
   // Turn on audio after user interaction
   userStartAudio();
   // Stop the previous song
-  for (let i = 0; i < sounds.length; i++) {
+  for (let i = 0; i < sounds.length; i = i + 1) {
     sounds[i].stop();
   }
   // Rememebr which songs is playing currently
@@ -181,27 +178,27 @@ function keyPressed() {
     }
   }
 
-  // ! pauses / plays dog 1
+  // 1 pauses / plays dog 1
   if (key == "1") {
     dog1Playing = !dog1Playing;
   }
 
-  // @ pauses / plays dog 2
+  // 2 pauses / plays dog 2
   if (key == "2") {
     dog2Playing = !dog2Playing;
   }
 
-  // # pauses / plays dog 3
+  // 3 pauses / plays dog 3
   if (key == "3") {
     dog3Playing = !dog3Playing;
   }
 
-  // $ pauses / plays dog 4
+  // 4 pauses / plays dog 4
   if (key == "4") {
     dog4Playing = !dog4Playing;
   }
 
-  // % pauses / plays dog 5
+  // 5 pauses / plays dog 5
   if (key == "5") {
     dog5Playing = !dog5Playing;
   }
@@ -224,11 +221,10 @@ function drawDiscoBall() {
 function drawDanceFloor() {
   let tileSize = 12;
   let floorY = 270;
-
   // Nested loops
   for (let y = floorY; y < 400; y = y + tileSize) {
     for (let x = 0; x < width; x = x + tileSize) {
-      // Makes each tile glow at a different time
+      // Makes each tile color changes in Sine waves
       let silver = 150 + 50 * sin(x + y);
       fill(silver);
       stroke(60);
