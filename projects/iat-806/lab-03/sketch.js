@@ -56,32 +56,28 @@ function draw() {
   // Animating the dogs on floor
 
   let speed = 20;
-  // Fast techno
 
+  // Fast techno
   if (currentSound == 0) {
     speed = 7;
   }
 
   // Slow blues
-
   if (currentSound == 1) {
     speed = 25;
   }
 
   // Billie Jean
-
   if (currentSound == 2) {
     speed = 10;
   }
 
-  // Poodle song
-
+  // ABBA Dancing Queen
   if (currentSound == 3) {
     speed = 12;
   }
 
   // Change frame every 20 draw cycles
-
   if (frameCount % speed == 0) {
     if (dog1Playing) {
       dog1Frame = (dog1Frame + 1) % 8;
@@ -102,46 +98,15 @@ function draw() {
     if (dog5Playing) {
       dog5Frame = (dog5Frame + 1) % 8;
     }
-    // Chow Chow dances only during song 2
 
+    // Chow Chow dances only during song 2
     if (currentSound == 2) {
       chowFrame = (chowFrame + 1) % 8;
     }
 
     // Poodle dances only during song 3
-
     if (currentSound == 3) {
       poodleFrame = (poodleFrame + 1) % 8;
-    }
-
-    // If Chow Chow or Poodle is dancing,
-
-    // the other dogs look at the dance floor
-
-    if (currentSound == 2 || currentSound == 3) {
-      // Watching poses
-
-      image(frames[0], 100, 400, 100, 100);
-
-      image(frames1[0], 300, 400, 110, 110);
-
-      image(frames2[0], 400, 400, 110, 110);
-
-      image(frames3[0], 50, 450, 100, 100);
-
-      image(frames4[0], 155, 470, 100, 100);
-    } else {
-      // Normal dancing
-
-      image(frames[dog1Frame], 100, 400, 100, 100);
-
-      image(frames1[dog2Frame], 300, 400, 110, 110);
-
-      image(frames2[dog3Frame], 400, 400, 110, 110);
-
-      image(frames3[dog4Frame], 50, 450, 100, 100);
-
-      image(frames4[dog5Frame], 155, 470, 100, 100);
     }
   }
 
