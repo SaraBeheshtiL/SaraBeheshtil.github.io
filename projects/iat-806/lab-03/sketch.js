@@ -8,7 +8,6 @@ let frames4 = [];
 let frames5 = [];
 let frames6 = [];
 let discoBall;
-let watchingPose = [];
 
 let dog1Frame = 0;
 let dog2Frame = 0;
@@ -46,10 +45,6 @@ async function setup() {
 
   for (let i = 0; i < 4; i = i + 1) {
     sounds[i] = await loadSound("sounds/sound" + i + ".mp3");
-  }
-
-  for (let i = 0; i < 4; i = i + 1) {
-    watchingPose[i] = await loadImage("watchingPose/dog_" + (i + 1) + ".png");
   }
 }
 
