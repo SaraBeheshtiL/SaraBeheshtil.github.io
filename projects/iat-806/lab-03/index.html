@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+<!doctype html>
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Lab 02 — Sara Beheshti</title>
+    <title>Lab 03 — Sara Beheshti</title>
 
     <link rel="stylesheet" href="../../../style.css" />
   </head>
@@ -23,24 +23,25 @@
     <main>
       <a class="back" href="../../iat-806/index.html">← Back to Projects</a>
 
-      <h1>Lab 02 — Bouncing Smiley Faces</h1>
+      <h1>Lab 03 — Dancing Dogs</h1>
 
-      <p class="tagline">An interactive animation created with p5.js.</p>
+      <p class="tagline">A frame-by-frame animation created with p5.js.</p>
 
       <p>
-        This sketch features two bouncing circles that move around the canvas.
-        The first circle grows and shrinks, changes to a random color when it
-        hits the top or bottom wall, and becomes a yellow smiley face when it
-        meets the other smiley face.
+        This sketch features a collection of funny dancing dogs. Each dog has
+        its own dance pose, creating a playful frame-by-frame animation on the
+        dance floor.
       </p>
 
       <p>
-        Click the canvas to change the first circle's direction. Press the
-        spacebar to pause it and press "R" to resume.
+        Click the canvas to start and stop the animation. Sound and other
+        interactions are added to make each dancing dog have its own
+        personality.
       </p>
+
       <p>
         View the code on
-        <a href="https://github.com/SaraBeheshtiL/Lab2" target="_blank">
+        <a href="https://github.com/SaraBeheshtiL/Lab3" target="_blank">
           GitHub
         </a>
       </p>
@@ -53,6 +54,8 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"></script>
+    <!-- p5.sound, the sound add-on. Must come after p5.js and before sketch.js. -->
+    <script src="https://cdn.jsdelivr.net/npm/p5.sound@0.4.1/dist/p5.sound.min.js"></script>
     <script src="sketch.js"></script>
   </body>
 </html>
