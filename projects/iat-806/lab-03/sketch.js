@@ -166,7 +166,6 @@ function draw() {
   if (currentSound == 3) {
     // Colorful party lights
 
-    drawPoodleLights();
     // Poodle enters from the right
     if (poodleX > 225) {
       poodleX = poodleX - 3;
@@ -271,27 +270,5 @@ function drawDanceFloor() {
       strokeWeight(1);
       rect(x, y, tileSize, tileSize);
     }
-  }
-}
-
-// Colorful lights for the Poodle dance
-let x, y, r, g, b;
-function drawPoodleLights() {
-  for (let i = 0; i < 5; i++) {
-    let x = random(width);
-
-    let y = random(height / 3);
-
-    let r = random(255);
-
-    let g = random(255);
-
-    let b = random(255);
-
-    noStroke();
-
-    fill(r, g, b, 80);
-
-    circle(x, y, 20);
   }
 }
