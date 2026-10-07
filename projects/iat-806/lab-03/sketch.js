@@ -27,7 +27,7 @@ let sounds = [];
 let soundIndex = 0;
 
 //the soundtrack which is currently playing
-let currentSound = 0;
+let currentSound = -1;
 
 async function setup() {
   createCanvas(600, 600);
@@ -77,7 +77,7 @@ function draw() {
   }
 
   // Change frame every 20 draw cycles
-  if (frameCount % speed == 0) {
+  if (currentSound != -1 && frameCount % speed == 0) {
     if (dog1Playing) {
       dog1Frame = (dog1Frame + 1) % 8;
     }
