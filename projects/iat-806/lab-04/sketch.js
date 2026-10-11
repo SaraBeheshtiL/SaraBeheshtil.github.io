@@ -15,7 +15,7 @@ let colors = [];
 let speeds = [];
 
 async function setup() {
-  const canvas = createCanvas(800, 420);
+  const canvas = createCanvas(1400, 800);
 
   // puts the canvas inside <div id="sketch-holder"> in index.html
   canvas.parent("sketch-holder");
@@ -50,7 +50,14 @@ function draw() {
     for (let j = 0; j < numRows; j++) {
       fill(colors[i][j][0], colors[i][j][1], colors[i][j][2], 120);
       rect(i * colWidth, j * rowHeight, colWidth, rowHeight);
-      animate(frames, speeds[i][j], i * colWidth, j * rowHeight, colWidth);
+      animate(
+        frames,
+        speeds[i][j],
+        i * colWidth,
+        j * rowHeight,
+        colWidth,
+        rowHeight,
+      );
     }
   }
 }
