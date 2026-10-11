@@ -24,15 +24,15 @@ async function setup() {
     colors[i] = [];
     speeds[i] = [];
     for (let j = 0; j < numRows; j++) {
-      colors[i][j] = [random(1, 255), random(1, 255), random(1, 255)];
-      speeds[i][j] = random(1, 10);
+      colors[i][j] = [random(1, 255), 255, 100];
+      speeds[i][j] = random(10, 30);
     }
   }
 
   rowHeight = height / numRows;
 
   for (let i = 0; i < numFrames; i++) {
-    let fileName = "dance_frames/dance" + i + ".png";
+    let fileName = "dance_frames/frame_" + (i + 1) + ".png";
     frames.push(await loadImage(fileName));
   }
 }
