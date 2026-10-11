@@ -2,13 +2,17 @@
 // Run with Live Server. Uses p5 2.x (async setup, await loadImage).
 
 let frames = []; // the 8 dance poses
-let frames2 = []; // TODO: load the jump poses into this array
+let frames2 = []; // twirk poses
+let frames3 = []; // couple poses
 let numFrames = 8;
 
 let numCols = 15;
 let numRows = 10;
 let colWidth;
 let rowHeight;
+let maxD;
+let mouseI;
+let mouseJ;
 
 // 2D arrays: one color and one speed for every cell in the grid
 let colors = [];
@@ -19,13 +23,14 @@ async function setup() {
 
   // puts the canvas inside <div id="sketch-holder"> in index.html
   canvas.parent("sketch-holder");
+  maxD = dist(0, 0, width, height);
 
   for (let i = 0; i < numCols; i++) {
     colors[i] = [];
     speeds[i] = [];
     for (let j = 0; j < numRows; j++) {
-      colors[i][j] = [random(1, 255), 100, 255];
-      speeds[i][j] = random(10, 30);
+      colors[i][j] = [50, 100, 65];
+      //speeds[i][j] = random(10, 30);
     }
   }
 
@@ -34,30 +39,84 @@ async function setup() {
   for (let i = 0; i < numFrames; i++) {
     let fileName = "dance_frames/frame_" + (i + 1) + ".png";
     frames.push(await loadImage(fileName));
+    let fileName1 = "twirk_frames/frame_" + (i + 1) + ".png";
+    frames2.push(await loadImage(fileName1));
+    let fileName2 = "couple_frames/frame_" + (i + 1) + ".png";
+    frames3.push(await loadImage(fileName2));
   }
 }
 
 function draw() {
   background(120);
+  // Changing the number of columns based on the position the mouse
   if (mouseX < width) {
     numCols = Math.floor(map(mouseX, 0, width, 8, 15));
-    // dist the mouse position and the position of the dancing profs
-    // in the grid, and then use that number to map to the speed.
     colWidth = width / numCols;
   }
 
   for (let i = 0; i < numCols; i++) {
     for (let j = 0; j < numRows; j++) {
-      fill(colors[i][j][0], colors[i][j][1], colors[i][j][2], 120);
-      rect(i * colWidth, j * rowHeight, colWidth, rowHeight);
-      animate(
-        frames,
-        speeds[i][j],
-        i * colWidth,
-        j * rowHeight,
-        colWidth,
-        rowHeight,
-      );
+      // If mouse is inside this cell
+      let mouseInside =
+        mouseX >= i * colWidth &&
+        mouseX < (i + 1) * colWidth &&
+        mouseY >= j * rowHeight &&
+        mouseY < (j + 1) * rowHeight;
+
+      if (mouseInside) {
+        mouseI = i;
+        mouseJ = j;
+      }
+
+      let doubleFrame =
+        (i == mouseI || i == mouseI + 1) && (j == mouseJ || j == mouseJ + 1);
+      let d = dist(i * colWidth, j * rowHeight, mouseX, mouseY);
+      let depth = Math.floor(map(d, 0, maxD, 255, 0));
+      if (!doubleFrame) {
+        // drawing normal cell
+        fill(colors[i][j][0], colors[i][j][1], colors[i][j][2], depth);
+        rect(i * colWidth, j * rowHeight, colWidth, rowHeight);
+        // dist the mouse position and the position of the dancing profs
+        // in the grid, and then use that number to map to the speed.
+        speeds[i][j] = Math.floor(map(d, 0, maxD, 2, 50));
+        if (j % 2 == 0) {
+          animate(
+            frames,
+            speeds[i][j],
+            i * colWidth,
+            j * rowHeight,
+            colWidth,
+            rowHeight,
+          );
+        } else {
+          animate(
+            frames2,
+            speeds[i][j],
+            i * colWidth,
+            j * rowHeight,
+            colWidth,
+            rowHeight,
+          );
+        }
+      }
+      // Check if mouse is inside a cell
+      if (mouseInside) {
+        fill(colors[i][j][0], colors[i][j][1], colors[i][j][2], depth);
+        rect(
+          mouseI * colWidth,
+          mouseJ * rowHeight,
+          2 * colWidth,
+          2 * rowHeight,
+        );
+        animate(
+          frames3,
+          30,
+          i * colWidth,
+          j * rowHeight,
+          2 * colWidth,
+          2 * rowHeight,
+        );
+      }
     }
   }
 }
@@ -80,6 +139,5 @@ function animate(frames, speed, xPosition, yPosition, imageWidth, imageHeight) {
 function getFrameIndex(speed) {
   let slowFrame = Math.floor(frameCount / speed);
   let index = slowFrame % frames.length;
-
   return index;
 }
