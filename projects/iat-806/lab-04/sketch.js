@@ -5,7 +5,7 @@ let frames = []; // the 8 dance poses
 let frames2 = []; // TODO: load the jump poses into this array
 let numFrames = 8;
 
-let numCols = 20;
+let numCols = 15;
 let numRows = 10;
 let colWidth;
 let rowHeight;
@@ -15,7 +15,7 @@ let colors = [];
 let speeds = [];
 
 async function setup() {
-  const canvas = createCanvas(1400, 800);
+  const canvas = createCanvas(1200, 800);
 
   // puts the canvas inside <div id="sketch-holder"> in index.html
   canvas.parent("sketch-holder");
@@ -24,7 +24,7 @@ async function setup() {
     colors[i] = [];
     speeds[i] = [];
     for (let j = 0; j < numRows; j++) {
-      colors[i][j] = [random(1, 255), 255, 100];
+      colors[i][j] = [random(1, 255), 100, 255];
       speeds[i][j] = random(10, 30);
     }
   }
@@ -40,7 +40,7 @@ async function setup() {
 function draw() {
   background(120);
   if (mouseX < width) {
-    numCols = Math.floor(map(mouseX, 0, width, 2, 20));
+    numCols = Math.floor(map(mouseX, 0, width, 8, 15));
     // dist the mouse position and the position of the dancing profs
     // in the grid, and then use that number to map to the speed.
     colWidth = width / numCols;
