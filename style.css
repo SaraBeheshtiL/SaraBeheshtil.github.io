@@ -76,7 +76,7 @@ header nav {
   margin-left: auto;
 }
 header nav a {
-  color: var(--ink);
+  color: rgb(87, 0, 87);
   text-decoration: none;
   margin-left: 4rem;
 }
@@ -176,6 +176,6 @@ footer {
   justify-content: center;
   align-items: center;
   border-top: 1px solid var(--line);
-  color: var(--muted);
+  color: rgb(87, 0, 87);
   font-size: 0.9rem;
 }
