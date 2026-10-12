@@ -71,7 +71,7 @@ function draw() {
       let doubleFrame =
         (i == mouseI || i == mouseI + 1) && (j == mouseJ || j == mouseJ + 1);
       let d = dist(i * colWidth, j * rowHeight, mouseX, mouseY);
-      let depth = Math.floor(map(d, 0, maxD, 255, 0));
+      let depth = Math.floor(map(d, 0, maxD, 200, 0));
       if (!doubleFrame) {
         // drawing normal cell
         fill(colors[i][j][0], colors[i][j][1], colors[i][j][2], depth);
