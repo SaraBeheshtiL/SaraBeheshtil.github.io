@@ -6,7 +6,7 @@ let frames2 = []; // twirk poses
 let frames3 = []; // couple poses
 let numFrames = 8;
 
-let numCols = 15;
+let numCols = 20;
 let numRows = 10;
 let colWidth;
 let rowHeight;
@@ -23,6 +23,7 @@ async function setup() {
 
   // puts the canvas inside <div id="sketch-holder"> in index.html
   canvas.parent("sketch-holder");
+  // I'm defining the possible maxiumum distance on canvas, I need it for later
   maxD = dist(0, 0, width, height);
 
   for (let i = 0; i < numCols; i++) {
@@ -33,7 +34,13 @@ async function setup() {
         if (j % 2 == 0) {
           colors[i][j] = random(["gray", "darkgray"]);
         } else {
-          colors[i][j] = random(["lightblue", "aliceblue"]);
+          /// I want the cats background be a random blue color. I found the name of these colors from Claude.
+          colors[i][j] = random([
+            "powderblue",
+            "lightblue",
+            "lightskyblue",
+            "steelblue",
+          ]);
         }
       }
     }
@@ -44,7 +51,7 @@ async function setup() {
   for (let i = 0; i < numFrames; i++) {
     let fileName = "dance_frames/frame_" + (i + 1) + ".png";
     frames.push(await loadImage(fileName));
-    let fileName1 = "cat_frames/frame_" + (i + 1) + ".png";
+    let fileName1 = "another_dance_frames/frame_" + (i + 1) + ".png";
     frames2.push(await loadImage(fileName1));
     let fileName2 = "couple_frames/frame_" + (i + 1) + ".png";
     frames3.push(await loadImage(fileName2));
@@ -53,15 +60,16 @@ async function setup() {
 
 function draw() {
   background(120);
+
   // Changing the number of columns based on the position the mouse
   if (mouseX < width) {
-    numCols = Math.floor(map(mouseX, 0, width, 8, 15));
+    numCols = Math.floor(map(mouseX, 0, width, 10, 20));
     colWidth = width / numCols;
   }
 
   for (let i = 0; i < numCols; i++) {
     for (let j = 0; j < numRows; j++) {
-      // If mouse is inside this cell
+      // I want to check if mouse is inside this cell, I want to ask the program to show the couple frames instead when mouse is inside a cell
       let mouseInside =
         mouseX >= i * colWidth &&
         mouseX < (i + 1) * colWidth &&
