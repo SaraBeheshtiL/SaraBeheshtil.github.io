@@ -2,8 +2,8 @@
 
 //Creating the background flickering grids
 // Number of columns and rows
-let numCol = 30;
-let numRow = 30;
+let numCol = 50;
+let numRow = 50;
 
 // Width and height of each cell
 let colWidth;
@@ -13,7 +13,7 @@ let rowHeight;
 let colors = ["gray", "darkgray "];
 
 // The coordinates of the fly(jay)
-let flyX = 700;
+let flyX = 900;
 let flyY = 200;
 
 ///Spider(Dunphy)////////////
@@ -32,10 +32,14 @@ let currentStep = 0;
 let targetX = 0;
 let targetY = 0;
 // Is Dunphy currently jumping?
-let isJumping = false;
+let spiderIsJumping = false;
+//Dunphy's direction for implementing backward movement
+let spiderDirection = 1; // Normal direction
+//Boolean variable to set the condition of Dunphy catching Jay
+let catchFly = false;
 
 function setup() {
-  createCanvas(800, 800);
+  createCanvas(1000, 800);
 
   // Defining the grids' cells width and height
   colWidth = width / numCol;
@@ -50,7 +54,8 @@ function setup() {
 function draw() {
   background(0);
 
-  //Creating flickering grids
+  //Creating flickering grids //////////
+  //////////////////////////////////////
   for (i = 0; i < numCol; i = i + 1) {
     for (j = 0; j < numRow; j = j + 1) {
       // Randomly choose yellow or black
@@ -67,52 +72,91 @@ function draw() {
 
   //////// Spider Movement //////////////
   ///////////////////////////////////////
-  if (isJumping == true) {
+  if (spiderIsJumping == true) {
     spiderX = spiderX + spiderSpeedX; //Forward Movement
     spiderY = spiderY + spiderSpeedY; // upward movement
     spiderSpeedY = spiderSpeedY + gravity; // Gravity pulls the spider down
 
-    // ------------------------------------------------------
+    // Check if Dunphy reached the next stair so that it falls on that
+    if (spiderSpeedY > 0 && spiderY >= targetY) {
+      // this checks if the Spider moving upward
+      if (spiderSpeedX > 0 && spiderX >= targetX) {
+        // this checks if  spider moving forward while moving forwrad or to th eright
+        //Now put Dunphy exactly on the stair
+        spiderX = targetX;
+        spiderY = targetY;
+        // Stop movement
+        spiderSpeedX = 0;
+        spiderSpeedY = 0;
+        // Dunphy has finished jumping
+        spiderIsJumping = false;
+      } else if (spiderSpeedX < 0 && spiderX <= targetX) {
+        // this defines if spider moving backward or to the left
+        //Now put Dunphy exactly on the stair
+        spiderX = targetX;
+        spiderY = targetY;
+        // Stop movement
+        spiderSpeedX = 0;
+        spiderSpeedY = 0;
+        // Dunphy has finished jumping
+        spiderIsJumping = false;
 
-    // Check if Dunphy reached the next stair horizontally
-
-    // AND is now falling
-
-    // ------------------------------------------------------
-
-    if (spiderX >= targetX && spiderSpeedY > 0 && spiderY >= targetY) {
-      // Put Dunphy exactly on the stair
-      spiderX = targetX;
-      spiderY = targetY;
-      // Stop movement
-      spiderSpeedX = 0;
-      spiderSpeedY = 0;
-      // Dunphy has finished jumping
-      isJumping = false;
+        // now while moving backward or to the left
+        //we need to identify if the step which the Spider falling onto, is step 2
+        // then we need to define catchFly condition to be true
+        if (currentStep == 2 && catchFly == false) {
+          catchFly = true;
+        }
+      } else if (spiderSpeedX == 0) {
+        // this defines only "jumping on the step" condition
+        spiderX = targetX;
+        spiderY = targetY;
+        spiderSpeedY = 0;
+        spiderIsJumping = false;
+      }
     }
   }
   // Instead of defining the spider as an object & class
   // we use "translate" function, which moves the coordinate systme to a new postion
   push();
   translate(spiderX, spiderY);
+  // Mirror around approximately the center of Dunphy
+  translate(125, 0);
+  scale(spiderDirection, 1);
+  translate(-125, 0);
   drawSpider();
   pop();
   // Above command says that the coordinate system moves when spider moves to its new position
   // that way the entire spider works as an object and it does not need to change all of its body parts coordinates
 
-  // If mouse is pressed, jay moves with the mouse
-  if (mouseIsPressed) {
-    flyX = mouseX;
-    flyY = mouseY;
-  } else {
-    // Draw the Fly plus vertical movement
-    flyY = flyY + random(-20, 20);
-    //Creating contrain for the movement of fly(Jay)
-    if (flyY < 50) {
-      flyY = 50;
-    }
-    if (flyY > 400) {
-      flyY = 400;
+  /// Let's check if Jay the fly is caught
+  if (catchFly == true) {
+    // jay follows Dunphy's tongue & because Dunphy is mirrored
+    // his tongue are toward the left
+    // but we want as long as catchFly is true have Jay attached to Dunphy's tongue
+    flyY = spiderY + 600;
+    if (spiderDirection == -1) {
+      flyX = spiderX - 30;
+    } // so if Dunphy is moving backward, Jay is attached to his tongue
+    else {
+      flyX = spiderX + 280;
+    } // this keeps Jay attached to Dunphy's tongue when it is mocing forward and the catchFly is true
+  }
+  // If mouse is pressed and Jay is not caught, jay moves with the mouse
+  else {
+    if (mouseIsPressed) {
+      flyX = mouseX;
+      flyY = mouseY;
+    } else {
+      // Jay has random vertical movement
+      flyY = flyY + random(-20, 20);
+      //Creating constrain for the movement of fly(Jay)
+      if (flyY < 50) {
+        flyY = 50;
+      }
+      if (flyY > 400) {
+        flyY = 400;
+      }
     }
   }
   drawFly(flyX, flyY);
@@ -123,92 +167,93 @@ function draw() {
 /////////////////////////////////////////////
 ////////////////////////////////////////////
 function keyPressed() {
-  if (key == " " && isJumping == false) {
+  ////// defining when the space key is pressed the spider jumps
+  if (key == " " && spiderIsJumping == false) {
     spiderSpeedY = -20;
     spiderSpeedX = 0;
     targetX = spiderX;
     targetY = spiderY;
-    isJumping = true;
+    spiderIsJumping = true;
   }
-  // RIGHT ARROW
 
-  // Dunphy jumps to the next stair
-
-  // ------------------------------------------------------
-
-  if (keyCode == RIGHT_ARROW && isJumping == false) {
-    // Only move if there are stairs remaining
-
-    if (currentStep < 5) {
+  //////// Pressing the  "RIGHT_ARROW" then Dunphy jumps to the next stair ////
+  if (keyCode == RIGHT_ARROW && spiderIsJumping == false) {
+    spiderDirection = 1; // Face to the right
+    // only three forward jumps
+    if (currentStep < 3) {
       // Move to the next step
-
       currentStep = currentStep + 1;
 
-      // ------------------------------------------
-
-      // STEP 1
-
-      // ------------------------------------------
-
+      /////// step 1 //////////
       if (currentStep == 1) {
+        targetX = 260;
+        targetY = -50;
+      }
+      /////// step 2 //////////
+      else if (currentStep == 2) {
+        targetX = 510;
+        targetY = -150;
+      }
+      /////// step 3 //////////
+      else if (currentStep == 3) {
+        targetX = 760;
+        targetY = -250;
+
+        /// While moving toward step 3, Jay the fly should escape and
+        /// there is a condition that as long as catchFly is not true
+        /// this escape should happen
+        if (catchFly == false) {
+          flyX = 600;
+          flyY = 100;
+        }
+      }
+      // Start the jump
+      spiderSpeedY = -20;
+      // Move toward the right
+      spiderSpeedX = 10;
+      spiderIsJumping = true;
+    }
+  }
+
+  //////// Pressing the  "LEFT_ARROW" then Dunphy turns around and chases Jay////
+  if (keyCode == LEFT_ARROW && spiderIsJumping == false) {
+    // Mirror Dunphy
+    spiderDirection = -1;
+    //Dunphy is on the last step
+    if (currentStep > 0) {
+      currentStep = currentStep - 1;
+
+      // BACK TO STEP 2
+
+      if (currentStep == 2) {
+        targetX = 510;
+
+        targetY = -150;
+      }
+
+      // BACK TO STEP 1
+      else if (currentStep == 1) {
         targetX = 260;
 
         targetY = -50;
       }
 
-      // ------------------------------------------
+      // BACK TO GROUND
+      else if (currentStep == 0) {
+        targetX = 0;
 
-      // STEP 2
-
-      // ------------------------------------------
-      else if (currentStep == 2) {
-        targetX = 360;
-
-        targetY = -100;
+        targetY = 0;
       }
 
-      // ------------------------------------------
-
-      // STEP 3
-
-      // ------------------------------------------
-      else if (currentStep == 3) {
-        targetX = 460;
-
-        targetY = -150;
-      }
-
-      // ------------------------------------------
-
-      // STEP 4
-
-      // ------------------------------------------
-      else if (currentStep == 4) {
-        targetX = 560;
-
-        targetY = -200;
-      }
-
-      // ------------------------------------------
-
-      // STEP 5
-
-      // ------------------------------------------
-      else if (currentStep == 5) {
-        targetX = 660;
-
-        targetY = -250;
-      }
-
-      // Start the jump
+      // Start jump
 
       spiderSpeedY = -20;
 
-      // Move toward the right
+      // Move left
 
-      spiderSpeedX = 10;
+      spiderSpeedX = -10;
 
-      isJumping = true;
+      spiderIsJumping = true;
     }
   }
 }
@@ -220,12 +265,11 @@ function keyPressed() {
 function drawStairs() {
   fill("black");
   noStroke();
-  rect(0, height - 50, 300, 50);
-  rect(width / 4 + 100, height - 100, 100, 100);
-  rect(width / 4 + 200, height - 150, 100, 150);
-  rect(width / 4 + 300, height - 200, 100, 200);
-  rect(width / 4 + 400, height - 250, 100, 250);
-  rect(width / 4 + 500, height - 300, 100, 300);
+  rect(0, height - 50, 250, 50);
+  rect(width / 4, height - 150, 250, 150);
+  rect(width / 4 + 250, height - 250, 250, 250);
+  rect(width / 4 + 500, height - 350, 250, 350);
+  rect(width / 4 + 750, height - 450, 250, 450);
 }
 
 // Definig a function which draws the Spider (Dunphy)
