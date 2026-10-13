@@ -69,7 +69,7 @@ function draw() {
   // Drawing the steps by own defined drawStrairs() function
   drawStairs();
 
-  //////// Specifing Dunphy the spider Movement //////////////
+  //////// Specifying Dunphy the spider Movement //////////////
   ///////////////////////////////////////
   if (spiderIsJumping == true) {
     spiderX = spiderX + spiderSpeedX; //Forward Movement
@@ -107,7 +107,7 @@ function draw() {
           catchFly = true;
         }
       } else if (spiderSpeedX == 0) {
-        // this defines only "jumping on the step" condition
+        // this defines the standing position on the step
         spiderX = targetX;
         spiderY = targetY;
         spiderSpeedY = 0;
@@ -118,10 +118,12 @@ function draw() {
   // Instead of defining the spider as an object & class
   // we use "translate" function, which moves the coordinate systme to a new postion
   push();
-  translate(spiderX, spiderY);
+  translate(spiderX, spiderY); // Translate() moves the coordinate system to this new coordinates which is Dunphy's current position.
+  // It means everything in drawSpider() moves spiderX pixels on the X axis and spiderY pixels on the Y axis
   // Mirror around approximately the center of Dunphy
   translate(125, 0);
-  scale(spiderDirection, 1);
+  scale(spiderDirection, 1); // scale() is a predefined function which helps scaling shapes.
+  // scale (x, y) means the amount to scale along the positive x-axis and the amount to scale along the positive y axis
   translate(-125, 0);
   drawSpider();
   pop();
@@ -135,11 +137,11 @@ function draw() {
     // but we want as long as catchFly is true have Jay attached to Dunphy's tongue
     flyY = spiderY + 600;
     if (spiderDirection == -1) {
-      flyX = spiderX - 30;
+      flyX = spiderX + 50;
     } // so if Dunphy is moving backward, Jay is attached to his tongue
     else {
-      flyX = spiderX + 280;
-    } // this keeps Jay attached to Dunphy's tongue when it is mocing forward and the catchFly is true
+      flyX = spiderX + 230;
+    } // this keeps Jay attached to Dunphy's tongue when it is moving forward and the catchFly is true
   }
   // If mouse is pressed and Jay is not caught, jay moves with the mouse
   else {
@@ -149,7 +151,7 @@ function draw() {
     } else {
       // Jay has random vertical movement
       flyY = flyY + random(-20, 20);
-      //Creating constrain for the movement of fly(Jay)
+      //creating constrain for the movement of fly(Jay)
       if (flyY < 50) {
         flyY = 50;
       }
@@ -178,6 +180,12 @@ function keyPressed() {
   //////// Pressing the  "RIGHT_ARROW" then Dunphy jumps to the next stair ////
   if (keyCode == RIGHT_ARROW && spiderIsJumping == false) {
     spiderDirection = 1; // Face to the right
+    // Start the jump
+    spiderSpeedY = -20;
+    // Move toward the right
+    spiderSpeedX = 10;
+    spiderIsJumping = true;
+
     // only three forward jumps
     if (currentStep < 3) {
       // Move to the next step
@@ -186,7 +194,7 @@ function keyPressed() {
       /////// step 1 //////////
       if (currentStep == 1) {
         targetX = 260;
-        targetY = -50;
+        targetY = -50; // it is the amount we are translating the entire spider vertically.
       }
       /////// step 2 //////////
       else if (currentStep == 2) {
@@ -206,11 +214,6 @@ function keyPressed() {
           flyY = 100;
         }
       }
-      // Start the jump
-      spiderSpeedY = -20;
-      // Move toward the right
-      spiderSpeedX = 10;
-      spiderIsJumping = true;
     }
   }
 
@@ -221,38 +224,29 @@ function keyPressed() {
     //Dunphy is on the last step
     if (currentStep > 0) {
       currentStep = currentStep - 1;
+      // Start jump
+      spiderSpeedY = -20;
+      // Move left
+      spiderSpeedX = -10;
+      spiderIsJumping = true;
 
-      // BACK TO STEP 2
-
+      //////// Back to step 2 ////////
       if (currentStep == 2) {
         targetX = 510;
-
         targetY = -150;
       }
 
-      // BACK TO STEP 1
+      ////// Back to step 1 ////////
       else if (currentStep == 1) {
         targetX = 260;
-
         targetY = -50;
       }
 
-      // BACK TO GROUND
+      ////back to ground ////////
       else if (currentStep == 0) {
         targetX = 0;
-
         targetY = 0;
       }
-
-      // Start jump
-
-      spiderSpeedY = -20;
-
-      // Move left
-
-      spiderSpeedX = -10;
-
-      spiderIsJumping = true;
     }
   }
 }
