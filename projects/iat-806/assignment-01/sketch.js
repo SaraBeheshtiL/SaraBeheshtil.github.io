@@ -31,7 +31,7 @@ let currentStep = 0;
 // Where Dunphy should land
 let targetX = 0;
 let targetY = 0;
-// Is Dunphy currently jumping?
+// Is Dunphy currently jumping? Defining a Boolean variable "spiderIsJumping"
 let spiderIsJumping = false;
 //Dunphy's direction for implementing backward movement
 let spiderDirection = 1; // Normal direction
@@ -46,8 +46,7 @@ function setup() {
   rowHeight = height / numRow;
 
   // Controls how fast the grid flickers
-  //frameRate in P5.js controls how many times draw() function
-  // repeat per second (by default it is 60 times but we change it to 2 to make the flickering slow)
+  //frameRate in P5.js controls how many times draw() function repeats per second (by default it is 60 times but we change it to 30 to make the flickering slower
   frameRate(30);
 }
 
@@ -58,7 +57,7 @@ function draw() {
   //////////////////////////////////////
   for (i = 0; i < numCol; i = i + 1) {
     for (j = 0; j < numRow; j = j + 1) {
-      // Randomly choose yellow or black
+      // Randomly choose gray or dark gray
       let randomColor = random(colors);
       fill(randomColor);
       // Grid lines
@@ -67,10 +66,10 @@ function draw() {
     }
   }
 
-  // Drawing the steps
+  // Drawing the steps by own defined drawStrairs() function
   drawStairs();
 
-  //////// Spider Movement //////////////
+  //////// Specifing Dunphy the spider Movement //////////////
   ///////////////////////////////////////
   if (spiderIsJumping == true) {
     spiderX = spiderX + spiderSpeedX; //Forward Movement
