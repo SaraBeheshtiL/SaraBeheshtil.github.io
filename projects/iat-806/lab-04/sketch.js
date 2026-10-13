@@ -19,7 +19,7 @@ let colors = [];
 let speeds = [];
 
 async function setup() {
-  const canvas = createCanvas(1200, 800);
+  const canvas = createCanvas(800, 800);
 
   // puts the canvas inside <div id="sketch-holder"> in index.html
   canvas.parent("sketch-holder");
@@ -29,8 +29,13 @@ async function setup() {
     colors[i] = [];
     speeds[i] = [];
     for (let j = 0; j < numRows; j++) {
-      colors[i][j] = [50, 100, 65];
-      //speeds[i][j] = random(10, 30);
+      if (frameCount % 10 == 0) {
+        if (j % 2 == 0) {
+          colors[i][j] = random(["gray", "darkgray"]);
+        } else {
+          colors[i][j] = random(["lightblue", "aliceblue"]);
+        }
+      }
     }
   }
 
@@ -39,7 +44,7 @@ async function setup() {
   for (let i = 0; i < numFrames; i++) {
     let fileName = "dance_frames/frame_" + (i + 1) + ".png";
     frames.push(await loadImage(fileName));
-    let fileName1 = "twirk_frames/frame_" + (i + 1) + ".png";
+    let fileName1 = "cat_frames/frame_" + (i + 1) + ".png";
     frames2.push(await loadImage(fileName1));
     let fileName2 = "couple_frames/frame_" + (i + 1) + ".png";
     frames3.push(await loadImage(fileName2));
@@ -71,10 +76,10 @@ function draw() {
       let doubleFrame =
         (i == mouseI || i == mouseI + 1) && (j == mouseJ || j == mouseJ + 1);
       let d = dist(i * colWidth, j * rowHeight, mouseX, mouseY);
-      let depth = Math.floor(map(d, 0, maxD, 200, 0));
+      let depth = Math.floor(map(d, 0, maxD, 255, 50));
       if (!doubleFrame) {
         // drawing normal cell
-        fill(colors[i][j][0], colors[i][j][1], colors[i][j][2], depth);
+        fill(colors[i][j]);
         rect(i * colWidth, j * rowHeight, colWidth, rowHeight);
         // dist the mouse position and the position of the dancing profs
         // in the grid, and then use that number to map to the speed.
