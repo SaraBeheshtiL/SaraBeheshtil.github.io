@@ -120,7 +120,7 @@ function draw() {
         animate(
           ///// I want the mouseInside cell shows frames3 when mouse is inside
           frames3,
-          30,
+          10,
           i * colWidth,
           j * rowHeight,
           2 * colWidth,
