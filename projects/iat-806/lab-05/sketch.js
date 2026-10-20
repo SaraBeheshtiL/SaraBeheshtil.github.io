@@ -60,7 +60,7 @@ class Ball {
   /// Methods can also take attributes, like move(byHowMuch)
 
   move(byHowMuch) {
-    this.x += random(-byHowMuch, byHowMuch);
+    this.x = 0;
     this.y += random(-byHowMuch, byHowMuch);
   }
 
@@ -68,5 +68,130 @@ class Ball {
     /// first object needs to exist
     fill(this.color);
     circle(this.x, this.y, this.r); // "this" mean this specific object
+  }
+}
+
+/////// Creating a funny Fish almost the same procedure I did for my Assignment 1/////
+///// This time I'm defining the fish as an object in a class/////
+////////////////////////////////////////////////////////////////////
+class Fish {
+  constructor(x, y, speed) {
+    this.x = x;
+    this.y = y;
+    this.speed = speed;
+    this.direction = 1;
+  }
+
+  /////// Chasing the mouse
+
+  move() {
+    if (mouseX > this.x) {
+      this.x = this.x + 5; ///// I chose five for the speed
+    }
+    if (mouseX < this.x) {
+      this.x = this.x - 5;
+    }
+    if (mouseY > this.y) {
+      this.y = this.y + 5;
+    }
+    if (mouseY < this.y) {
+      this.y = this.y - 5;
+    }
+
+    if (mouseX > this.x) {
+      this.direction = 1;
+    } else {
+      this.direction = -1;
+    }
+  }
+
+  /////// show/draw the fish
+  show() {
+    push();
+    translate(this.x, this.y);
+    scale(this.direction, 1);
+
+    // TAIL
+    fill(255, 120, 80);
+    noStroke();
+    triangle(-60, 0, -130, -45, -130, 45);
+
+    // TOP FIN
+    fill(255, 90, 60);
+    triangle(-20, -35, 10, -90, 45, -30);
+
+    // BOTTOM FIN
+
+    fill(255, 100, 60);
+
+    triangle(-10, 35, 15, 75, 40, 35);
+
+    // BODY
+
+    fill(255, 170, 70);
+
+    stroke(0);
+
+    strokeWeight(3);
+
+    ellipse(0, 0, 160, 100);
+
+    // MOUTH
+
+    noFill();
+
+    stroke(0);
+
+    strokeWeight(3);
+
+    arc(65, 15, 25, 20, 0, PI);
+
+    // BIG FUNNY EYES
+
+    fill(255);
+
+    stroke(0);
+
+    strokeWeight(3);
+
+    ellipse(20, -35, 55, 65);
+
+    ellipse(65, -30, 50, 60);
+
+    // Draw pupils
+
+    this.lookAtMouse();
+
+    pop();
+  }
+
+  // METHOD 3: Pupils follow the mouse
+
+  lookAtMouse() {
+    let relativeMouseX = (mouseX - this.x) * this.direction;
+
+    let relativeMouseY = mouseY - this.y;
+
+    let pupilX = constrain(relativeMouseX * 0.1, -12, 12);
+
+    let pupilY = constrain(relativeMouseY * 0.1, -15, 15);
+
+    // PUPILS
+
+    fill(0);
+
+    noStroke();
+
+    circle(20 + pupilX, -35 + pupilY, 20);
+
+    circle(65 + pupilX, -30 + pupilY, 20);
+
+    // WHITE REFLECTIONS
+
+    fill(255);
+
+    circle(16 + pupilX, -40 + pupilY, 7);
+
+    circle(61 + pupilX, -35 + pupilY, 7);
   }
 }
