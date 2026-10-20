@@ -4,7 +4,7 @@
    =========================================================== */
 
 :root {
-  --ink: #16161a; /* main text color */
+  --ink: #010102; /* main text color */
   --muted: #6b6b76; /* quieter text */
   --accent: #2f4fd8; /* links and highlights */
   --paper: #fdfdfb; /* page background */
@@ -18,19 +18,26 @@
 .profile-section {
   display: flex;
   align-items: center;
-  gap: 40px;
+  gap: 25px;
+  max-width: auto;
+  padding: 25px;
+  border: 1px solid rgba(185, 143, 185, 0.263);
+  border-radius: 12px;
+  margin: 30px auto;
 }
 
 .profile-image {
-  width: 300px;
-  height: 200px;
+  width: 180px;
+  height: 180px;
   object-fit: cover;
   border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .bio {
-  flex: 1;
-  text-align: left;
+  font-size: 18px;
+  line-height: 1.6;
+  margin: 0;
 }
 
 body {
@@ -48,8 +55,8 @@ header,
 main,
 footer {
   max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
+  margin-left: 30px;
+  margin-right: 30px;
 }
 
 /* --- top navigation ---------------------------------------- */
@@ -68,7 +75,7 @@ header .site-name {
   font-size: 1.15rem;
   font-weight: 700;
   text-decoration: none;
-  color: rgb(87, 0, 87);
+  color: rgb(75, 0, 75);
   margin-right: auto;
 }
 
@@ -105,13 +112,13 @@ h2 {
 }
 
 a {
-  color: rgb(87, 0, 87);
+  color: rgb(185, 143, 185);
 
   transition: color 0.3s;
 }
 
 a:hover {
-  color: rgb(156, 0, 156);
+  color: rgb(223, 69, 197);
 }
 
 /* --- the list of links on the projects pages ----------------- */
@@ -173,16 +180,13 @@ canvas {
 /* --- footer -------------------------------------------------- */
 
 footer {
-  margin-top: 4rem;
-  background-image: url("Background.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  min-height: 30px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-top: 1px solid var(--line);
-  color: rgb(87, 0, 87);
-  font-size: 0.9rem;
+  margin-top: 500px;
+  background-image: url("Background.png");
+  background-size: 50% auto;
+  background-position: bottom center;
+  background-repeat: 1;
+  width: 100%;
+  height: 120px;
+  flex-shrink: 0;
+  border: none;
 }
