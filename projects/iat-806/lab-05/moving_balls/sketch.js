@@ -1,6 +1,6 @@
 // Create an array to put all the balls in it
 let balls = [];
-let numberOfBalls = 10;
+let numberOfBalls = 500;
 //let myBall2;
 
 // Object-orintaed programming
@@ -18,26 +18,13 @@ function setup() {
     balls.push(ball);
   }
 }
+
 function draw() {
   background(20);
 
-  //   for (let i = 0; i < numberOfBalls; i = i + 1) {
-  //     balls[i].move();
-  //     balls[i].show();
-  //   }
-
   for (let ball of balls) {
-    // ball.move(random(0, 10));
-    // ball.changeSize(random(0, 10));
-    // ball.show();
-    ball.change(5);
+    ball.change(2, mouseX, mouseY);
   }
-  //   myBall.move(); // the sequence of the functions are whatever we defined in the class
-  //   myBall.show();
-  //   /// the attributes which belongs to myBall
-  //   myBall.x;
-  //   myBall2.move();
-  //   myBall2.show();
 }
 
 class Ball {
@@ -47,12 +34,23 @@ class Ball {
     this.y = y;
     this.color = c;
     this.r = r;
+    this.speedY = 0;
   }
-  change(byHowMuch) {
+
+  change(byHowMuch, mx, my) {
     this.changeSize(byHowMuch);
     this.move(byHowMuch);
+
+    // Only run away when the mouse is pressed
+    if (mouseIsPressed) {
+      this.runAwayFromMouse(5, mx, my);
+    }
+    this.changeColorNearMouse(150, mx, my);
+
     this.show();
+    this.gravity(0.2);
   }
+
   changeSize(byHowMuch) {
     this.r = this.r + random(-byHowMuch, byHowMuch);
   }
@@ -68,5 +66,41 @@ class Ball {
     /// first object needs to exist
     fill(this.color);
     circle(this.x, this.y, this.r); // "this" mean this specific object
+  }
+  // This method makes the balls fall and bounce off the bottom
+  gravity(byHowMuch) {
+    this.speedY = this.speedY + byHowMuch;
+    this.y = this.y + this.speedY;
+
+    if (this.y > height - this.r / 2) {
+      this.y = height - this.r / 2;
+      this.speedY = this.speedY * -0.8;
+    }
+  }
+  // This method makes the balls move away when the mouse gets close
+  runAwayFromMouse(byHowMuch, mx, my) {
+    let d = dist(this.x, this.y, mx, my);
+
+    if (d < 100) {
+      if (this.x < mx) {
+        this.x -= byHowMuch;
+      } else {
+        this.x += byHowMuch;
+      }
+
+      if (this.y < my) {
+        this.y -= byHowMuch;
+      } else {
+        this.y += byHowMuch;
+      }
+    }
+  }
+  // This method changes the ball's color when the mouse approaches
+  changeColorNearMouse(byHowMuch) {
+    let d = dist(this.x, this.y, mouseX, mouseY);
+
+    if (d < byHowMuch) {
+      this.color = color(random(255), random(255), random(255));
+    }
   }
 }

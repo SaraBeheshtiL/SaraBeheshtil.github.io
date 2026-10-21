@@ -5,30 +5,16 @@ let fish;
 let waterfish = [];
 let swimmingFish = [];
 
-///// Preload all the media before starting creation
-function preload() {
-  for (let k = 0; k < 12; k = k + 1) {
-    waterfish[k] = loadImage("different_fishes/fish_" + k + ".png");
-  }
-}
-
 // Object-orintaed programming
-function setup() {
+async function setup() {
   createCanvas(800, 800);
-
-  // Create n=numberOfBalls balls
-  // for (let i = 0; i < numberOfBalls; i = i + 1) {
-  //   let ballX = random(width);
-  //   let ballY = random(600, 800);
-  //   let ballColor = color(0, 0, 200 + random(0, 55), 50);
-  //   let ballR = 30;
-  //   let ball = new Ball(ballX, ballY, ballColor, ballR);
-  //   // Put the ball(s) in the balls array
-  //   balls.push(ball);
-  // }
-
+  // Load all 12 fish images
+  for (let k = 0; k < 12; k++) {
+    waterfish[k] = await loadImage("different_fishes/fish_" + k + ".png");
+  }
   fish = new Fish(200, 200);
 }
+
 function draw() {
   background(0, 0, 50);
 
@@ -55,11 +41,12 @@ function draw() {
   // Move and show fish
   fish.moveFish();
   fish.showFish();
+  fish.eatFish();
 
   // Create a new fish every 60 frames
   if (frameCount % 20 == 0) {
-    let fishX = 0; // Start outside the left side
-    let fishY = random(100, 700); // Random vertical position
+    let fishX = 800; // Start outside the left side
+    let fishY = random(200, 700); // Random vertical position
     // Choose one of the 12 fish images
     let fishImage = random(waterfish);
     // Create a new swimming fish
@@ -204,6 +191,29 @@ class Fish {
     circle(16 + pupilX, -35 + pupilY, 7);
     circle(61 + pupilX, -30 + pupilY, 7);
   }
+  eatFish() {
+    // Find the mouth position
+    let mouthX = this.x + 60 * this.direction;
+    let mouthY = this.y + 15;
+
+    // Check every swimming fish
+    for (let i = swimmingFish.length - 1; i >= 0; i--) {
+      let f = swimmingFish[i];
+
+      // Find the center of the swimming fish
+      let fishCenterX = f.x + f.size / 2;
+      let fishCenterY = f.y + f.size / 2;
+
+      // Calculate distance between mouth and swimming fish
+      let d = dist(mouthX, mouthY, fishCenterX, fishCenterY);
+
+      // If the mouth touches the swimming fish
+      if (d < f.size / 2 + 12) {
+        // Remove the swimming fish
+        swimmingFish.splice(i, 1);
+      }
+    }
+  }
 }
 
 class SwimmingFish {
@@ -211,9 +221,10 @@ class SwimmingFish {
     this.x = x;
     this.y = y;
     this.img = img;
-    this.speed = random(1, 4);
+    this.speed = random(-4, -1);
     this.size = random(50, 120);
   }
+
   move() {
     this.x = this.x + this.speed;
   }
