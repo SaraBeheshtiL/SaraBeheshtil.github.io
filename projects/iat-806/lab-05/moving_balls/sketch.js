@@ -1,6 +1,9 @@
 // Create an array to put all the balls in it
 let balls = [];
-let numberOfBalls = 50;
+let numberOfBalls = 1000;
+
+/// gavity condition
+let gravityOn = false;
 
 // Object-orintaed programming
 function setup() {
@@ -46,7 +49,9 @@ class Ball {
     }
     this.colorNearMouse();
     this.show();
-    if (keyIsDown(DOWN_ARROW)) {
+
+    //// when you press the space button the gravity works. and the balls
+    if (gravityOn == true) {
       this.gravity(0.2);
     }
   }
@@ -71,24 +76,25 @@ class Ball {
   }
   // This method makes the balls fall and bounce off the bottom
   gravity(byHowMuch) {
-    this.speedY = this.speedY + byHowMuch;
-    this.y = this.y + this.speedY;
+    this.speedY = this.speedY + byHowMuch; /// vertical speed chnages by gravity
+    this.y = this.y + this.speedY; /// then vertical location changes by speed in Y direction
 
     if (this.y > height - this.r / 2) {
+      // We are creating the condition when the ball's vertical position
+      // go over the canvas it should return by the smaller speed and with a chnage in speed direction (-0.8)
       this.y = height - this.r / 2;
       this.speedY = this.speedY * -0.8;
     }
   }
-  // This method makes the balls move away when the mouse gets close
+  // This method makes the balls move away when the mouse gets closeer than 100 pixels
   escapingTheMouse(byHowMuch, mouseX, mouseY) {
     let d = dist(this.x, this.y, mouseX, mouseY);
-    if (d < 100) {
+    if (d < this.r / 2 + 100) {
       if (this.x < mouseX) {
         this.x -= byHowMuch;
       } else {
         this.x += byHowMuch;
       }
-
       if (this.y < mouseY) {
         this.y -= byHowMuch;
       } else {
@@ -96,13 +102,22 @@ class Ball {
       }
     }
   }
-  // This method changes the ball's color when the mouse approaches them (in less than 50 pixels near them)
+  // This method changes the ball's color when the mouse approaches them (in less than 120 pixels near them)
   colorNearMouse() {
     let d = dist(this.x, this.y, mouseX, mouseY);
-    if (d < 120) {
+    if (d < 120 + this.r / 2) {
       this.color = color(random(255), random(255), random(255));
     } else {
       this.color = this.originalColor;
     }
+  }
+}
+
+//// I want to defining a keyPressed function so when a key (in this case "space") pressed the gravity works
+function keyPressed() {
+  if (key === " ") {
+    gravityOn = true;
+  } else {
+    gravityOn = false;
   }
 }
