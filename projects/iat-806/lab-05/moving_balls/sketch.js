@@ -1,17 +1,21 @@
 // Create an array to put all the balls in it
 let balls = [];
-let numberOfBalls = 1000;
+let numberOfBalls = 500;
+let crazyImage;
+let crazyBall;
 
 /// gavity condition
 let gravityOn = false;
 
 // Object-orintaed programming
-function setup() {
+async function setup() {
   createCanvas(800, 800);
+  // loading the crazyImage (Trump photo)
+  crazyImage = await loadImage("crazy.png");
 
   // Create n=numberOfBalls balls
   for (let i = 0; i < numberOfBalls; i = i + 1) {
-    let ballX = random(200, 600);
+    let ballX = random(100, 700);
     let ballY = 300;
     let ballColor = color(100, 100, 200 + random(0, 100));
     let ballR = 50;
@@ -19,6 +23,8 @@ function setup() {
     // Put the ball(s) in the balls array
     balls.push(ball);
   }
+  //the bouncing image
+  crazyBall = new CrazyBall(100, 100, 100, crazyImage);
 }
 
 function draw() {
@@ -27,8 +33,14 @@ function draw() {
   for (let ball of balls) {
     ball.change(2, mouseX, mouseY);
   }
+  //// when the gravity is on the image appeares and attaches to the mouse
+  if (gravityOn) {
+    crazyBall.move();
+    crazyBall.show();
+  }
 }
-
+//////////////////////////////////////////////////////////////////
+///////////// Balls //////////////////////////////////////////////
 class Ball {
   // x xposition, y yposition, c color, r radius
   constructor(x, y, c, r) {
@@ -119,5 +131,25 @@ function keyPressed() {
     gravityOn = true;
   } else {
     gravityOn = false;
+  }
+}
+
+////////////////////////////////////////////////////////////////
+/////////////// creating a new class for Trump image ////////
+class CrazyBall {
+  constructor(x, y, r, img) {
+    this.x = x;
+    this.y = y;
+    this.r = r;
+    this.img = img;
+  }
+  // the image attches to the mouse
+  move() {
+    this.x = mouseX;
+    this.y = mouseY;
+  }
+  // Display the image
+  show() {
+    image(this.img, this.x - this.r / 2, this.y - this.r / 2, this.r, this.r);
   }
 }
