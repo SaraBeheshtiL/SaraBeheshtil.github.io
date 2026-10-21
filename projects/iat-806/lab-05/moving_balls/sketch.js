@@ -1,6 +1,6 @@
 // Create an array to put all the balls in it
 let balls = [];
-let numberOfBalls = 500;
+let numberOfBalls = 50;
 
 // Object-orintaed programming
 function setup() {
@@ -10,8 +10,8 @@ function setup() {
   for (let i = 0; i < numberOfBalls; i = i + 1) {
     let ballX = random(200, 600);
     let ballY = 300;
-    let ballColor = color(123, 0, 200 + random(0, 100));
-    let ballR = 30;
+    let ballColor = color(100, 100, 200 + random(0, 100));
+    let ballR = 50;
     let ball = new Ball(ballX, ballY, ballColor, ballR);
     // Put the ball(s) in the balls array
     balls.push(ball);
@@ -32,24 +32,26 @@ class Ball {
     this.x = x;
     this.y = y;
     this.color = c;
+    this.originalColor = c; /// I want to save the origanl color to return it back in some methods
     this.r = r;
     this.speedY = 0;
   }
 
-  change(byHowMuch, mx, my) {
+  change(byHowMuch, mouseX, mouseY) {
     this.changeSize(byHowMuch);
     this.move(byHowMuch);
-
-    // Only run away when the mouse is pressed
+    ///// When mouse is pressed the balls escape the mouse when it approches
     if (mouseIsPressed) {
-      this.runAwayFromMouse(5, mx, my);
+      this.escapingTheMouse(5, mouseX, mouseY);
     }
-    this.changeColorNearMouse(150, mx, my);
-
+    this.colorNearMouse();
     this.show();
-    this.gravity(0.2);
+    if (keyIsDown(DOWN_ARROW)) {
+      this.gravity(0.2);
+    }
   }
 
+  /// This method changes the sizes of the balls by a random number in the (-byHowMuch, byHowMuch)  bracket
   changeSize(byHowMuch) {
     this.r = this.r + random(-byHowMuch, byHowMuch);
   }
@@ -57,6 +59,7 @@ class Ball {
   /// Methods can also take attributes, like move(byHowMuch)
 
   move(byHowMuch) {
+    /// this method moves the balls in x and y direction by a random number in the (-byHowMuch, byHowMuch) bracket
     this.x += random(-byHowMuch, byHowMuch);
     this.y += random(-byHowMuch, byHowMuch);
   }
@@ -77,29 +80,29 @@ class Ball {
     }
   }
   // This method makes the balls move away when the mouse gets close
-  runAwayFromMouse(byHowMuch, mx, my) {
-    let d = dist(this.x, this.y, mx, my);
-
+  escapingTheMouse(byHowMuch, mouseX, mouseY) {
+    let d = dist(this.x, this.y, mouseX, mouseY);
     if (d < 100) {
-      if (this.x < mx) {
+      if (this.x < mouseX) {
         this.x -= byHowMuch;
       } else {
         this.x += byHowMuch;
       }
 
-      if (this.y < my) {
+      if (this.y < mouseY) {
         this.y -= byHowMuch;
       } else {
         this.y += byHowMuch;
       }
     }
   }
-  // This method changes the ball's color when the mouse approaches
-  changeColorNearMouse(byHowMuch) {
+  // This method changes the ball's color when the mouse approaches them (in less than 50 pixels near them)
+  colorNearMouse() {
     let d = dist(this.x, this.y, mouseX, mouseY);
-
-    if (d < byHowMuch) {
+    if (d < 120) {
       this.color = color(random(255), random(255), random(255));
+    } else {
+      this.color = this.originalColor;
     }
   }
 }
