@@ -1,7 +1,6 @@
 // Create an array to put all the balls in it
 let balls = [];
 let numberOfBalls = 500;
-//let myBall2;
 
 // Object-orintaed programming
 function setup() {

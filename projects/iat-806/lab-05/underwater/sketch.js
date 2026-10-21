@@ -4,13 +4,19 @@ let numberOfBalls = 20;
 let fish;
 let waterfish = [];
 let swimmingFish = [];
+let underwaterSound;
 
 // Object-orintaed programming
 async function setup() {
   createCanvas(800, 800);
-  // Load all 12 fish images
+  /////Load all 12 fish images
   for (let k = 0; k < 12; k++) {
     waterfish[k] = await loadImage("different_fishes/fish_" + k + ".png");
+  }
+  function sound() {
+    underwaterSound = loadSound("underwater-ambience.mp3");
+    underwaterSound.loop(); /// Play the sound continiously
+    underwaterSound.setVolume(0.5); /// set the volume
   }
   fish = new Fish(200, 200);
 }
