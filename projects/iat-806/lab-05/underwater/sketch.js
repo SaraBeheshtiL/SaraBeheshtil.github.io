@@ -13,12 +13,12 @@ async function setup() {
   for (let k = 0; k < 12; k++) {
     waterfish[k] = await loadImage("different_fishes/fish_" + k + ".png");
   }
+  fish = new Fish(200, 200);
   function sound() {
     underwaterSound = loadSound("underwater-ambience.mp3");
     underwaterSound.loop(); /// Play the sound continiously
     underwaterSound.setVolume(0.5); /// set the volume
   }
-  fish = new Fish(200, 200);
 }
 
 function draw() {
