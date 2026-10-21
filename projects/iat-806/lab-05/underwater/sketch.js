@@ -13,12 +13,9 @@ async function setup() {
   for (let k = 0; k < 12; k++) {
     waterfish[k] = await loadImage("different_fishes/fish_" + k + ".png");
   }
+  underwaterSound = await loadSound("underwater-ambience.mp3"); // load once
+
   fish = new Fish(200, 200);
-}
-function sound() {
-  underwaterSound = loadSound("underwater-ambience.mp3");
-  underwaterSound.loop(); /// Play the sound continiously
-  underwaterSound.setVolume(0.5); /// set the volume
 }
 
 function draw() {
@@ -63,8 +60,6 @@ function draw() {
     newFish.move();
     newFish.show();
   }
-
-  sound();
 }
 
 class Ball {
