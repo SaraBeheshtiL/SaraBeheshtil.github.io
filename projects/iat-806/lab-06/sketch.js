@@ -1,6 +1,6 @@
 let xposition, yposition;
 let balls = [];
-let numOfBalls = 5000;
+let numOfBalls = 1000;
 let x, y, d, c;
 
 ////// Video ///////
@@ -46,10 +46,13 @@ function draw() {
 
   for (let i = 0; i < numOfBalls; i = i + 1) {
     balls[i].move();
+    // First, check whether the ball is on the person's body
     if (segmentation) {
       balls[i].ballsOnBody();
     }
-    balls[i].show();
+    // Then, check whether the mouse is touching the ball
     balls[i].red();
+    // Finally, draw the ball
+    balls[i].show();
   }
 }

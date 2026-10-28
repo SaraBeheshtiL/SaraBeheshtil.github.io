@@ -26,11 +26,10 @@ class Ball {
   }
 
   red() {
+    /// by this method I m defining when the mouse is on the ball, the color changes to red
     let distance = dist(this.x, this.y, mouseX, mouseY);
     if (distance < this.d / 2) {
       this.color = "red";
-    } else {
-      this.color = this.originalColor;
     }
   }
   ballsOnBody() {
@@ -45,7 +44,7 @@ class Ball {
     // If the mask pixel at this position is not black/transparent, it's a person
     if (maskAlpha !== 255) {
       // this.color = "orange";
-      this.color = color(0, 0, 0, 50);
+      this.color = color(0, 0, 0, 100);
     } else {
       this.color = this.originalColor;
     }
