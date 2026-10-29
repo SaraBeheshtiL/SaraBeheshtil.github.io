@@ -104,7 +104,8 @@ class CrazyBall extends Ball {
 
     let size = this.d + this.breathing;
     // Draw the body
-    this.color = color(0, 200, 100);
+    this.color = color(0, 0, 0, 100);
+    this.originalCrazyBallColor = this.color;
     fill(this.color);
     noStroke();
     circle(0, 0, size);
@@ -115,10 +116,10 @@ class CrazyBall extends Ball {
   respond() {
     if (this.onBody) {
       this.speed = 8;
-      this.color = color(0, 0, 0, 100);
+      this.color = color("red");
     } else {
       this.speed = 2;
-      this.color = this.originalColor;
+      this.color = this.originalColororiginalCrazyBallColor;
     }
   }
 }
