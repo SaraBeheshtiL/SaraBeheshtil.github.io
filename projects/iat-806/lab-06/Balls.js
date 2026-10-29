@@ -45,6 +45,7 @@ class Ball {
     if (maskAlpha !== 255) {
       // this.color = "orange";
       this.color = color(0, 0, 0, 100);
+      this.d = 25;
     } else {
       this.color = this.originalColor;
     }

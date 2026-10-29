@@ -1,6 +1,6 @@
 let xposition, yposition;
 let balls = [];
-let numOfBalls = 1000;
+let numOfBalls = 3000;
 let x, y, d, c;
 
 ////// Video ///////
@@ -26,7 +26,7 @@ async function setup() {
   for (let i = 0; i < numOfBalls; i = i + 1) {
     x = random(0, width);
     y = random(0, height);
-    d = 30 + random(-10, 10);
+    d = 30 + random(-20, 20);
     c = color(0, 100, random([50, 255]), 100);
     balls[i] = new Ball(x, y, d, c);
   }
