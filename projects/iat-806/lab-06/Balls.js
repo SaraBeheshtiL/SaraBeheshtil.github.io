@@ -12,6 +12,9 @@ class Ball {
   show() {
     fill(this.color);
     stroke(120);
+    let changingD = random(-1, 1);
+    this.d = this.d + changingD;
+    this.d = constrain(this.d + changingD, 20, 35);
     circle(this.x, this.y, this.d / 2);
   }
 
