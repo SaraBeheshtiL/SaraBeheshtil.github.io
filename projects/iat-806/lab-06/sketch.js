@@ -28,7 +28,12 @@ async function setup() {
     y = random(0, height);
     d = 30 + random([-5, 5]);
     c = color(0, 100, random([50, 255]), 100);
-    balls[i] = new Ball(x, y, d, c);
+    // balls[i] = new Ball(x, y, d, c);
+    if (random(1) < 0.92) {
+      balls[i] = new Ball(x, y, d, c);
+    } else {
+      balls[i] = new CrazyBall(x, y, d, c);
+    }
   }
 }
 function gotResults(result) {
@@ -49,6 +54,9 @@ function draw() {
     // First, check whether the ball is on the person's body
     if (segmentation) {
       balls[i].ballsOnBody();
+    }
+    if (balls[i] instanceof CrazyBall) {
+      balls[i].respond();
     }
     // Then, check whether the mouse is touching the ball
     balls[i].red();

@@ -7,6 +7,7 @@ class Ball {
     this.d = d;
     this.color = c;
     this.originalColor = c;
+    this.onBody = false;
   }
 
   show() {
@@ -48,8 +49,65 @@ class Ball {
     if (maskAlpha !== 255) {
       // just giving a half-transparent black color to the circles which are on the body
       this.color = color(0, 0, 0, 100);
+      this.onBody = true;
     } else {
       this.color = this.originalColor;
+    }
+  }
+}
+
+//////////// CrazyBall as a new object extended from Balls Class /////
+///////////////////////////////////////////////////////////////
+class CrazyBall extends Ball {
+  ///// Every CrazyBall is a Ball, but it can have additional properties and behaviors.
+  constructor(x, y, d, c) {
+    super(x, y, d, c); ////super() calls the constructor of the parent class, Ball.
+    //// giving new properties
+    this.angle = random(TWO_PI); /// this angle is supposed to initiate the movement direction
+    this.speed = random(1, 3);
+  }
+
+  move() {
+    /// Defininh a new movemnet for CrazyBalls compared to the normal Balls
+    // Change direction unpredictably
+    this.angle += random(-0.2, 0.2);
+
+    this.x += cos(this.angle) * this.speed; ///movment in x direction
+    this.y += sin(this.angle) * this.speed; /// movement in y direction
+
+    // Keep it inside the canvas
+    this.x = constrain(this.x, 0, width - 1);
+    this.y = constrain(this.y, 0, height - 1);
+  }
+
+  show() {
+    push();
+    translate(this.x, this.y);
+
+    // Crazy breathing effect
+    this.breathing = 0;
+    this.breathingSpeed = 0.5;
+    this.breathing += this.breathingSpeed;
+
+    if (this.breathing > 10 || this.breathing < -10) {
+      this.breathingSpeed *= -1;
+    }
+
+    let size = this.d + this.breathing;
+    // Draw the body
+    fill(0, 0, 0, 150);
+    noStroke();
+    circle(0, 0, size);
+
+    pop();
+  }
+
+  respond() {
+    if (this.onBody) {
+      this.speed = 8;
+      this.color = color(0, 200, 0);
+    } else {
+      this.speed = 2;
     }
   }
 }
