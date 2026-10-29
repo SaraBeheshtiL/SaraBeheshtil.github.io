@@ -66,6 +66,9 @@ class CrazyBall extends Ball {
     //// giving new properties
     this.angle = random(TWO_PI); /// this angle is supposed to initiate the movement direction
     this.speed = random(1, 3);
+
+    this.color = c;
+    this.originalCrazyBallColor = c;
   }
 
   move() {
@@ -76,36 +79,37 @@ class CrazyBall extends Ball {
     this.x += cos(this.angle) * this.speed; ///movment in x direction
     this.y += sin(this.angle) * this.speed; /// movement in y direction
 
-    // // Keep it inside the canvas
-    if (
-      this.x > width - this.d / 2 ||
-      this.x < this.d / 2 ||
-      this.y > height - this.d / 2 ||
-      this.y < this.d / 2
-    ) {
-      this.speed = random(-3, -1);
+    // Bounce when hitting the LEFT or RIGHT wall
+
+    if (this.x > width - this.d / 2 || this.x < this.d / 2) {
+      this.angle = PI - this.angle;
     }
+
+    // Bounce when hitting the TOP or BOTTOM wall
+    if (this.y > height - this.d / 2 || this.y < this.d / 2) {
+      this.angle = -this.angle;
+    }
+
+    // Keep the CrazyBall inside the canvas
+    this.x = constrain(this.x, this.d / 2, width - this.d / 2);
+    this.y = constrain(this.y, this.d / 2, height - this.d / 2);
   }
-  // this.x = constrain(this.x, 0, width - 1);
-  // this.y = constrain(this.y, 0, height - 1);
 
   show() {
     push();
     translate(this.x, this.y);
 
-    // Crazy breathing effect
+    // breathing effect of crazy ball (changing sizes)
     this.breathing = 0;
     this.breathingSpeed = 0.5;
     this.breathing += this.breathingSpeed;
-
+    // constrain the size changes to a limit (I chose 10)
     if (this.breathing > 10 || this.breathing < -10) {
       this.breathingSpeed *= -1;
     }
 
     let size = this.d + this.breathing;
-    // Draw the body
-    this.color = color(0, 0, 0, 100);
-    this.originalCrazyBallColor = this.color;
+    // us e current color
     fill(this.color);
     noStroke();
     circle(0, 0, size);
@@ -114,9 +118,10 @@ class CrazyBall extends Ball {
   }
 
   respond() {
+    // when the crazy ball is onbody, theu changes speed and color
     if (this.onBody) {
       this.speed = 8;
-      this.color = color("red");
+      this.color = color(255, 0, 0, 50);
     } else {
       this.speed = 2;
       this.color = this.originalColororiginalCrazyBallColor;

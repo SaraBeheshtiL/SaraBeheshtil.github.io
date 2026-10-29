@@ -55,6 +55,8 @@ function draw() {
     if (segmentation) {
       balls[i].ballsOnBody();
     }
+    // Check if the current ball is a CrazyBall.
+    // If it is, make it respond.
     if (balls[i] instanceof CrazyBall) {
       balls[i].respond();
     }
