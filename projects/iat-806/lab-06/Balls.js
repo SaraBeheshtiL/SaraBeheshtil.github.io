@@ -51,6 +51,7 @@ class Ball {
       this.color = color(0, 0, 0, 100);
       this.onBody = true;
     } else {
+      this.onBody = false;
       this.color = this.originalColor;
     }
   }
@@ -75,10 +76,18 @@ class CrazyBall extends Ball {
     this.x += cos(this.angle) * this.speed; ///movment in x direction
     this.y += sin(this.angle) * this.speed; /// movement in y direction
 
-    // Keep it inside the canvas
-    this.x = constrain(this.x, 0, width - 1);
-    this.y = constrain(this.y, 0, height - 1);
+    // // Keep it inside the canvas
+    if (
+      this.x > width - this.d / 2 ||
+      this.x < this.d / 2 ||
+      this.y > height - this.d / 2 ||
+      this.y < this.d / 2
+    ) {
+      this.speed = random(-3, -1);
+    }
   }
+  // this.x = constrain(this.x, 0, width - 1);
+  // this.y = constrain(this.y, 0, height - 1);
 
   show() {
     push();
@@ -95,7 +104,8 @@ class CrazyBall extends Ball {
 
     let size = this.d + this.breathing;
     // Draw the body
-    fill(0, 0, 0, 150);
+    this.color = color(0, 200, 100);
+    fill(this.color);
     noStroke();
     circle(0, 0, size);
 
@@ -105,9 +115,10 @@ class CrazyBall extends Ball {
   respond() {
     if (this.onBody) {
       this.speed = 8;
-      this.color = color(0, 200, 0);
+      this.color = color(0, 0, 0, 100);
     } else {
       this.speed = 2;
+      this.color = this.originalColor;
     }
   }
 }
