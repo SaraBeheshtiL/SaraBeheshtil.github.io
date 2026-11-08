@@ -1,18 +1,18 @@
 //////////////////// HAUNTED ROOM //////////////////////
 
 // Back wall coordinates
-let BACK = {
+let BackWall = {
   x1: 245,
   y1: 150,
   x2: 395,
-  y2: 262,
+  y2: 265,
 };
 
+// doors is an array of objects from the Door class
 let doors = [];
-let tablePosition;
 let roomGraphics;
 
-// Initialize the room once
+// Creating the room with selfdefined function of setupRoom
 function setupRoom() {
   doors = [
     new Door("left", 0.18, 0.36, 0.72, true),
@@ -25,8 +25,6 @@ function setupRoom() {
     new Door("back", 0, 0, 0.75, false),
   ];
 
-  tablePosition = floorPoint(0.35, 0.35);
-
   // Draw the static room once
   roomGraphics = createGraphics(width, height);
   drawRoom(roomGraphics);
@@ -36,10 +34,17 @@ function setupRoom() {
 
 // Find a point on the left or right wall
 function wallPoint(side, t, h) {
-  let x = side === "left" ? lerp(0, BACK.x1, t) : lerp(width, BACK.x2, t);
+  /// side is left or right // t means the depth of the room between 0 to 1 (0 means close to viewer and 1 means the back wall
+  // h means how height on the wall between 0 to 1, ero means the floor and one means the ceiling.
+  let x;
+  if (side === "left") {
+    x = lerp(0, BackWall.x1, t); // lerp gives a number between two numbers at a specific increment. lerp(start, stop, amt)
+  } else {
+    x = lerp(width, BackWall.x2, t);
+  }
 
-  let floorY = lerp(height, BACK.y2, t);
-  let ceilingY = lerp(0, BACK.y1, t);
+  let floorY = lerp(height, BackWall.y2, t);
+  let ceilingY = lerp(0, BackWall.y1, t);
 
   return {
     x: x,
@@ -236,17 +241,17 @@ function drawWallpaper(g) {
     }
   }
 
-  // Random dark stains
-  g.noStroke();
+  // // Random dark stains
+  // g.noStroke();
 
-  for (let i = 0; i < 25; i++) {
-    g.fill(18, 15, 16, 65);
+  // for (let i = 0; i < 25; i++) {
+  //   g.fill(18, 15, 16, 65);
 
-    let side = random(["left", "right"]);
-    let p = wallPoint(side, random(0.05, 0.9), random(0.3, 0.95));
+  //   let side = random(["left", "right"]);
+  //   let p = wallPoint(side, random(0.05, 0.9), random(0.3, 0.95));
 
-    g.ellipse(p.x, p.y, random(10, 40), random(20, 70));
-  }
+  //   g.ellipse(p.x, p.y, random(10, 40), random(20, 70));
+  // }
 }
 
 //////////////////// STAIRCASE //////////////////////
