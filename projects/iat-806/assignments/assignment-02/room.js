@@ -269,31 +269,29 @@ function drawWallpaper(g) {
 
 //////////////////// BASEMENT STAIRS //////////////////////
 
+//////////////////// BASEMENT STAIRCASE //////////////////////
+
 function drawStairs(g) {
-  // Number of visible steps
+  // Five connected stairs
   let numSteps = 5;
 
-  // Center of the staircase
+  // Center of the room
   let centerX = width / 2;
 
-  // The entrance closest to the viewer
+  // Position of the staircase opening
+  let backY = height * 0.65;
   let frontY = height * 0.97;
 
-  // The far end of the opening
-  let backY = height * 0.62;
-
-  // Width of the opening at the front
+  // Width of staircase at far and near ends
+  let backWidth = width * 0.13;
   let frontWidth = width * 0.55;
 
-  // Width of the opening at the back
-  let backWidth = width * 0.2;
+  ////////////////// FLOOR OPENING //////////////////
 
-  ////////////////// DARK OPENING //////////////////
-
+  // Black hole in the floor
   g.noStroke();
   g.fill(2, 2, 4);
 
-  // Draw a trapezoid to create a hole in the floor
   g.quad(
     centerX - backWidth / 2,
     backY,
@@ -305,110 +303,143 @@ function drawStairs(g) {
     frontY,
   );
 
-  ////////////////// INNER SIDE WALLS //////////////////
+  ////////////////// DARK BACK WALL //////////////////
 
-  // Left wall of the staircase opening
-  g.fill(13, 9, 9);
+  // The vertical dark wall at the end of the stairs
+  let backWallHeight = 30;
+
+  g.fill(5, 4, 6);
 
   g.quad(
     centerX - backWidth / 2,
     backY,
-    centerX - frontWidth / 2,
-    frontY,
-    centerX - frontWidth / 2 + 17,
-    frontY,
-    centerX - backWidth / 2 + 10,
-    backY + 18,
-  );
-
-  // Right wall of the staircase opening
-  g.fill(9, 7, 8);
-
-  g.quad(
     centerX + backWidth / 2,
     backY,
-    centerX + frontWidth / 2,
-    frontY,
-    centerX + frontWidth / 2 - 17,
-    frontY,
-    centerX + backWidth / 2 - 10,
-    backY + 18,
+    centerX + backWidth / 2,
+    backY + backWallHeight,
+    centerX - backWidth / 2,
+    backY + backWallHeight,
   );
 
-  ////////////////// FIVE STEPS //////////////////
+  ////////////////// STAIRCASE GEOMETRY //////////////////
 
+  // Each edge will be shared between two steps
+  let edges = [];
+
+  for (let i = 0; i <= numSteps; i++) {
+    let t = i / numSteps;
+
+    // Perspective makes distant steps closer together
+    let p = pow(t, 1.5);
+
+    // Position from far to near
+    let y = lerp(backY + backWallHeight, frontY, p);
+
+    // Width increases toward the viewer
+    let w = lerp(backWidth * 0.85, frontWidth * 0.9, p);
+
+    edges.push({
+      left: centerX - w / 2,
+      right: centerX + w / 2,
+      y: y,
+    });
+  }
+
+  ////////////////// CONNECTED STAIRS //////////////////
+
+  // Draw from the far end toward the viewer
   for (let i = 0; i < numSteps; i++) {
-    // 0 means far away, 1 means close to viewer
+    let far = edges[i];
+    let near = edges[i + 1];
+
     let t = i / (numSteps - 1);
 
-    // Compress the distant steps
-    let perspective = pow(t, 1.8);
-
-    // Position of each step
-    let y = lerp(backY + 45, frontY - 12, perspective);
-
-    // Steps become wider toward the viewer
-    let w = lerp(backWidth * 0.55, frontWidth * 0.84, perspective);
-
-    // Step thickness
-    let h = lerp(2, 12, perspective);
-
-    // Depth of the wooden top surface
-    let depth = lerp(2, 10, perspective);
-
     // Far steps are darker
-    let brightness = lerp(10, 75, pow(t, 1.6));
+    let brightness = lerp(15, 85, pow(t, 1.5));
 
-    // Vertical front face of the step
+    // Height of the vertical step face
+    let riser = lerp(3, 12, t);
+
+    // Horizontal tread surface
     g.noStroke();
-    g.fill(brightness * 0.55, brightness * 0.38, brightness * 0.28);
-
-    g.quad(
-      centerX - w / 2,
-      y,
-      centerX + w / 2,
-      y,
-      centerX + w / 2,
-      y + h,
-      centerX - w / 2,
-      y + h,
-    );
-
-    // Wooden top surface
     g.fill(brightness, brightness * 0.68, brightness * 0.48);
 
     g.quad(
-      centerX - w / 2,
-      y,
-      centerX + w / 2,
-      y,
-      centerX + w / 2 - 4,
-      y - depth,
-      centerX - w / 2 + 4,
-      y - depth,
+      far.left,
+      far.y,
+      far.right,
+      far.y,
+      near.right,
+      near.y - riser,
+      near.left,
+      near.y - riser,
     );
 
-    // Subtle worn edge
-    g.stroke(90, 65, 45, 70 * t);
+    // Vertical face of the step
+    g.fill(brightness * 0.48, brightness * 0.32, brightness * 0.24);
+
+    g.quad(
+      near.left,
+      near.y - riser,
+      near.right,
+      near.y - riser,
+      near.right,
+      near.y,
+      near.left,
+      near.y,
+    );
+
+    // Subtle line on the wooden edge
+    g.stroke(110, 78, 53, 90 * t);
     g.strokeWeight(1);
 
-    g.line(centerX - w / 2, y, centerX + w / 2, y);
+    g.line(near.left, near.y - riser, near.right, near.y - riser);
   }
 
-  ////////////////// STAIRCASE BORDER //////////////////
+  ////////////////// SIDE WALLS //////////////////
 
-  // Dark wooden edges around the opening
+  // Left wall
+  g.noStroke();
+  g.fill(12, 9, 10, 190);
+
+  g.quad(
+    centerX - backWidth / 2,
+    backY,
+    centerX - frontWidth / 2,
+    frontY,
+    edges[numSteps].left,
+    frontY,
+    edges[0].left,
+    edges[0].y,
+  );
+
+  // Right wall
+  g.fill(9, 7, 8, 190);
+
+  g.quad(
+    centerX + backWidth / 2,
+    backY,
+    centerX + frontWidth / 2,
+    frontY,
+    edges[numSteps].right,
+    frontY,
+    edges[0].right,
+    edges[0].y,
+  );
+
+  ////////////////// OUTER EDGES //////////////////
+
   g.noFill();
-  g.stroke(35, 23, 19);
-  g.strokeWeight(6);
+  g.stroke(38, 25, 20);
+  g.strokeWeight(5);
 
-  // Left edge
+  // Left diagonal edge
   g.line(centerX - backWidth / 2, backY, centerX - frontWidth / 2, frontY);
 
-  // Right edge
+  // Right diagonal edge
   g.line(centerX + backWidth / 2, backY, centerX + frontWidth / 2, frontY);
 
-  // Back edge
+  // Back horizontal edge
   g.line(centerX - backWidth / 2, backY, centerX + backWidth / 2, backY);
 }
 

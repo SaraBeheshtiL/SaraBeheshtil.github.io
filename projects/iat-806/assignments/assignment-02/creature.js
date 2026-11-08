@@ -1,188 +1,136 @@
-// A pale, long-haired ghost girl that crawls toward your face.
-// Everything is drawn in a 100x100 "design space" and scaled,
-// so she gets BIGGER as she gets closer to you.
+/// A ghost that comes out of a door and creeps toward you.
+// RULE: while the light is on her she FREEZES (and slowly burns).
+//       In the dark she moves in sudden jumps — so when the light
+//       comes back, she is somewhere else.
 class Creature {
-  constructor(speed) {
-    // Spawn just outside a random edge of the screen
-    let side = floor(random(4));
-    let m = 70;
-    if (side === 0) {
-      this.x = random(width);
-      this.y = -m;
-    } else if (side === 1) {
-      this.x = width + m;
-      this.y = random(height);
-    } else if (side === 2) {
-      this.x = random(width);
-      this.y = height + m;
-    } else {
-      this.x = -m;
-      this.y = random(height);
-    }
+  constructor(door, speed) {
+    let s = door.spawnPoint();
+    this.startX = s.x;
+    this.startY = s.y;
+    this.startScale = s.scale;
+    // where she ends up: right in front of you
+    this.endX = random(width * 0.3, width * 0.7);
+    this.endY = height * 0.62;
 
-    this.size = random(70, 95);
-    this.speed = speed;
+    this.p = 0; // progress: 0 = in the doorway, 1 = in your face
+    this.speed = speed; // how far each jump goes
     this.health = 100;
     this.lit = false;
 
-    this.seed = random(1000); // makes each one move differently
-    this.crawl = random(TWO_PI); // hand animation
-    this.persp = 0.55; // perspective: small far away, big up close
-    this.tilt = 0; // head tilt
-    this.shakeX = 0;
-    this.shakeY = 0;
+    this.seed = random(1000);
+    this.tilt = random(-0.3, 0.3);
+    this.crawl = random(TWO_PI);
+    this.nextJump = frameCount + floor(random(20, 50));
 
-    // If ghost images were loaded, each creature gets one of them.
-    // If not, she falls back to the drawn ghost.
+    // a photo ghost if images were loaded, otherwise the drawn ghost
     this.img = ghostImages.length > 0 ? random(ghostImages) : null;
+
+    this.updatePosition();
   }
 
-  // Crawl toward the target (your face) in jerky stop-start bursts.
-  // Light pushes her back.
-  move(targetX, targetY) {
-    let angle = atan2(targetY - this.y, targetX - this.x);
-    let burst = noise(this.seed, frameCount * 0.04) > 0.45 ? 2 : 0.15;
-    let s = this.lit ? -this.speed * 0.6 : this.speed * burst;
-    this.x += cos(angle) * s;
-    this.y += sin(angle) * s;
-
-    this.crawl += this.lit ? 0.4 : burst * 0.15;
-    this.tilt = (noise(this.seed + 50, frameCount * 0.012) - 0.5) * 1.4;
-
-    if (this.lit) {
-      this.shakeX = random(-3, 3);
-      this.shakeY = random(-3, 3);
-    } else {
-      this.shakeX = 0;
-      this.shakeY = 0;
-    }
-
-    let d = dist(this.x, this.y, targetX, targetY);
-    this.persp = map(d, 0, 400, 1.4, 0.55, true);
+  // Turn progress into a position and size on screen (perspective)
+  updatePosition() {
+    let t = pow(this.p, 1.4);
+    this.x = lerp(this.startX, this.endX, t);
+    this.y = lerp(this.startY, this.endY, t);
+    this.sc = lerp(this.startScale, 2.6, this.p * this.p);
   }
 
   // THIS is where your body touches the object:
   // is she inside the flashlight beam?
   checkLight(lightX, lightY, lightRadius) {
-    this.lit = dist(this.x, this.y, lightX, lightY) < lightRadius * 0.6;
+    let d = dist(this.x, this.y, lightX, lightY);
+    this.lit = d < lightRadius * 0.6 + 25 * this.sc;
     if (this.lit) {
-      this.health -= 2;
+      this.health -= 1.1; // hold the light on her ~1.5 s to banish her
     }
+  }
+
+  move() {
+    if (this.lit) {
+      return; // FROZEN while you look at her
+    }
+    // In the dark: lurch forward in a sudden jump, in a new pose
+    if (frameCount >= this.nextJump) {
+      this.p = min(1, this.p + this.speed * random(0.6, 1.4));
+      this.tilt = random(-0.5, 0.5);
+      this.crawl += PI / 2;
+      this.nextJump = frameCount + floor(random(12, 35));
+      this.updatePosition();
+    }
+  }
+
+  reachedYou() {
+    return this.p >= 1;
   }
 
   isDead() {
     return this.health <= 0;
   }
 
-  // Did she reach your face?
-  reached(targetX, targetY, targetRadius) {
-    return (
-      dist(this.x, this.y, targetX, targetY) <
-      targetRadius + 30 * this.currentScale()
-    );
-  }
+  // ---------- drawing ----------
 
-  currentScale() {
-    let burnShrink = map(this.health, 0, 100, 0.3, 1);
-    return (this.size / 100) * this.persp * burnShrink;
-  }
-
-  // Full body — drawn BEFORE the darkness, so you only see her in the light
+  // Drawn BEFORE the darkness, so you only see her in the light
   display() {
-    if (this.img) {
-      this.displayImage();
-      return;
-    }
-    push();
-    translate(this.x + this.shakeX, this.y + this.shakeY);
-    scale(this.currentScale());
-    this.drawBody();
-    push();
-    translate(0, -10);
-    rotate(this.tilt);
-    this.drawHead();
-    pop();
-    pop();
-  }
-
-  // Just the eyes — drawn AFTER the darkness, so they glow in the dark
-  displayEyes() {
-    if (this.img) {
-      this.displayGlimpse();
-      return;
-    }
-    push();
-    translate(this.x + this.shakeX, this.y + this.shakeY);
-    scale(this.currentScale());
-    translate(0, -10);
-    rotate(this.tilt);
-    noStroke();
-    fill(255, 255, 255, 35); // soft glow
-    ellipse(-9, -4, 14, 14);
-    ellipse(9, -4, 14, 14);
-    this.drawEyeballs();
-    pop();
-  }
-
-  // ---------- photo ghost ----------
-
-  imageSize() {
-    let h = 240 * this.currentScale();
-    let w = (h * this.img.width) / this.img.height;
-    return [w, h];
-  }
-
-  // In the light: the full photo, flickering and glitching
-  displayImage() {
-    let [w, h] = this.imageSize();
-    push();
-    translate(this.x + this.shakeX, this.y + this.shakeY);
-    rotate(this.tilt * 0.25);
-    imageMode(CENTER);
-    if (this.lit) {
-      tint(255, 175, 165); // burning red
-    } else {
-      tint(255, random() < 0.05 ? 120 : 235); // flicker
-    }
-
-    let glitch = random() < (this.lit ? 0.35 : 0.06);
-    if (glitch) {
-      // cut the photo into horizontal slices and shift them sideways
-      let slices = 5;
-      for (let s = 0; s < slices; s++) {
-        let sy = (s * this.img.height) / slices;
-        let sh = this.img.height / slices;
-        let dy = -h / 2 + (s + 0.5) * (h / slices);
-        image(
-          this.img,
-          random(-12, 12),
-          dy,
-          w,
-          h / slices,
-          0,
-          sy,
-          this.img.width,
-          sh,
-        );
-      }
-    } else {
-      image(this.img, 0, 0, w, h);
-    }
-    pop();
-  }
-
-  // In the dark: a faint glimpse of the face, now and then
-  displayGlimpse() {
-    if (this.lit) return;
-    let [w, h] = this.imageSize();
-    let n = noise(this.seed + 7, frameCount * 0.05);
-    let alpha = n > 0.62 ? 70 : 14;
+    let burn = map(this.health, 100, 0, 0, 150); // redder the longer you burn her
     push();
     translate(this.x, this.y);
-    rotate(this.tilt * 0.25);
-    imageMode(CENTER);
-    tint(255, alpha);
-    image(this.img, 0, 0, w, h);
+    rotate(this.tilt * 0.4);
+    if (this.img) {
+      let h = 150 * this.sc;
+      let w = (h * this.img.width) / this.img.height;
+      imageMode(CENTER);
+      tint(255, 245 - burn, 240 - burn);
+      if (this.lit && random() < 0.15) {
+        // glitch: slice her sideways
+        let slices = 5;
+        for (let s = 0; s < slices; s++) {
+          let sy = (s * this.img.height) / slices;
+          let sh = this.img.height / slices;
+          let dy = -h / 2 + (s + 0.5) * (h / slices);
+          image(
+            this.img,
+            random(-10, 10),
+            dy,
+            w,
+            h / slices,
+            0,
+            sy,
+            this.img.width,
+            sh,
+          );
+        }
+      } else {
+        image(this.img, 0, 0, w, h);
+      }
+    } else {
+      scale(this.sc * 1.3);
+      this.drawBody();
+      translate(0, -10);
+      this.drawHead();
+    }
+    pop();
+  }
+
+  // Drawn AFTER the darkness: every now and then you catch a glimpse
+  displayGlimpse() {
+    if (this.lit) return;
+    let n = noise(this.seed, frameCount * 0.04);
+    if (n < 0.66) return;
+    push();
+    translate(this.x, this.y);
+    rotate(this.tilt * 0.4);
+    if (this.img) {
+      let h = 150 * this.sc;
+      let w = (h * this.img.width) / this.img.height;
+      imageMode(CENTER);
+      tint(255, 40);
+      image(this.img, 0, 0, w, h);
+    } else {
+      scale(this.sc * 1.3);
+      translate(0, -10);
+      this.drawEyeballs();
+    }
     pop();
   }
 
