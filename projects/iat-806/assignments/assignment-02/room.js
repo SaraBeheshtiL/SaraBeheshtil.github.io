@@ -54,6 +54,7 @@ function wallPoint(side, t, h) {
 
 // Find a point on the floor
 function floorPoint(u, t) {
+  // u controls the horizontal position across the floor, from left (0) to right (1).
   let left = wallPoint("left", t, 0);
   let right = wallPoint("right", t, 0);
 
@@ -64,30 +65,38 @@ function floorPoint(u, t) {
 }
 
 //////////////////// DOOR CLASS //////////////////////
-
+///// Using this class to create doors on each wall ///////
 class Door {
   constructor(side, t1, t2, tall, ajar) {
+    // side shows the wall where the door is located (left, or right or back)
     this.side = side;
+    // depth wher ethe door begins
     this.t1 = t1;
+    // depth where the door ends
     this.t2 = t2;
+    // door height relative to the wall
     this.tall = tall;
+    // whether the door is half open or not
     this.ajar = ajar;
   }
 
   corners() {
+    // this method calculates the four points needed to draw a door.
     if (this.side === "back") {
-      let cx = (BACK.x1 + BACK.x2) / 2;
-      let w = (BACK.x2 - BACK.x1) * 0.28;
-      let top = lerp(BACK.y2, BACK.y1, this.tall);
+      let cx = (BackWall.x1 + BackWall.x2) / 2;
+      let w = (BackWall.x2 - BackWall.x1) * 0.28; //the width of the door as 28% of the back wall.
+      let top = lerp(BackWall.y2, BackWall.y1, this.tall); // top calculate the top of the door.
 
+      // Now it returns the four points of the back door
       return [
         { x: cx - w / 2, y: top },
         { x: cx + w / 2, y: top },
-        { x: cx + w / 2, y: BACK.y2 },
-        { x: cx - w / 2, y: BACK.y2 },
+        { x: cx + w / 2, y: BackWall.y2 },
+        { x: cx - w / 2, y: BackWall.y2 },
       ];
     }
 
+    // here by using the wallPoint function we create the side doors
     return [
       wallPoint(this.side, this.t1, this.tall),
       wallPoint(this.side, this.t2, this.tall),
@@ -96,9 +105,11 @@ class Door {
     ];
   }
 
+  // This method calculates where the creature should appear
   spawnPoint() {
+    // Here we are calling corners() method to get the four corners of the current door
     let c = this.corners();
-
+    // average of the four corners x coordinates
     let x = (c[0].x + c[1].x + c[2].x + c[3].x) / 4;
     let floorY = (c[2].y + c[3].y) / 2;
     let topY = (c[0].y + c[1].y) / 2;
@@ -109,7 +120,7 @@ class Door {
       scale: ((floorY - topY) * 0.9) / 150,
     };
   }
-
+  /// This method draws the door on the canvas.
   display(g) {
     let c = this.corners();
 
@@ -151,11 +162,13 @@ function drawRoom(g) {
   g.background(8, 7, 10);
   g.noStroke();
 
+  // Left wall points
   let L0 = wallPoint("left", 0, 0);
   let L0t = wallPoint("left", 0, 1);
   let L1 = wallPoint("left", 1, 0);
   let L1t = wallPoint("left", 1, 1);
 
+  // Right wall points
   let R0 = wallPoint("right", 0, 0);
   let R0t = wallPoint("right", 0, 1);
   let R1 = wallPoint("right", 1, 0);
@@ -163,45 +176,54 @@ function drawRoom(g) {
 
   // Ceiling
   g.fill(20, 18, 22);
+
   g.quad(L0t.x, L0t.y, R0t.x, R0t.y, R1t.x, R1t.y, L1t.x, L1t.y);
 
   // Floor
   g.fill(43, 29, 23);
+
   g.quad(L0.x, L0.y, R0.x, R0.y, R1.x, R1.y, L1.x, L1.y);
 
   // Left wall
   g.fill(51, 44, 40);
+
   g.quad(L0t.x, L0t.y, L1t.x, L1t.y, L1.x, L1.y, L0.x, L0.y);
 
   // Right wall
   g.fill(39, 34, 35);
+
   g.quad(R0t.x, R0t.y, R1t.x, R1t.y, R1.x, R1.y, R0.x, R0.y);
 
   // Back wall
-  g.noStroke();
   g.fill(35, 32, 34);
-  g.rect(BACK.x1, BACK.y1, BACK.x2 - BACK.x1, BACK.y2 - BACK.y1);
 
+  g.rect(
+    BackWall.x1,
+    BackWall.y1,
+    BackWall.x2 - BackWall.x1,
+    BackWall.y2 - BackWall.y1,
+  );
+
+  // Draw floorboards and wallpaper
   drawFloorboards(g);
   drawWallpaper(g);
 
-  // Room edges
+  // Room corner edges
   g.stroke(17, 13, 13);
   g.strokeWeight(3);
 
-  g.line(0, 0, BACK.x1, BACK.y1);
-  g.line(width, 0, BACK.x2, BACK.y1);
-  g.line(0, height, BACK.x1, BACK.y2);
-  g.line(width, height, BACK.x2, BACK.y2);
+  g.line(0, 0, BackWall.x1, BackWall.y1);
+  g.line(width, 0, BackWall.x2, BackWall.y1);
+  g.line(0, height, BackWall.x1, BackWall.y2);
+  g.line(width, height, BackWall.x2, BackWall.y2);
 
-  // Doors
+  // Draw all doors
   for (let door of doors) {
     door.display(g);
   }
 
-  // Furniture and staircase
+  // Draw basement staircase in the middle of floor
   drawStairs(g);
-  drawTable(g);
 }
 
 //////////////////// FLOORBOARDS //////////////////////
@@ -210,6 +232,7 @@ function drawFloorboards(g) {
   g.stroke(23, 16, 13);
   g.strokeWeight(1.5);
 
+  // Lines going toward the back wall
   for (let u = 0; u <= 1.001; u += 0.1) {
     let a = floorPoint(u, 0);
     let b = floorPoint(u, 1);
@@ -240,97 +263,153 @@ function drawWallpaper(g) {
       g.line(a.x, a.y, b.x, b.y);
     }
   }
-
-  // // Random dark stains
-  // g.noStroke();
-
-  // for (let i = 0; i < 25; i++) {
-  //   g.fill(18, 15, 16, 65);
-
-  //   let side = random(["left", "right"]);
-  //   let p = wallPoint(side, random(0.05, 0.9), random(0.3, 0.95));
-
-  //   g.ellipse(p.x, p.y, random(10, 40), random(20, 70));
-  // }
 }
 
-//////////////////// STAIRCASE //////////////////////
+//////////////////// BASEMENT STAIRS //////////////////////
+
+//////////////////// BASEMENT STAIRS //////////////////////
 
 function drawStairs(g) {
-  // Staircase on the right side of the room
-  // Wider steps are closer to the viewer
+  // Number of visible steps
+  let numSteps = 5;
 
-  let numSteps = 7;
+  // Center of the staircase
+  let centerX = width / 2;
 
-  for (let i = numSteps - 1; i >= 0; i--) {
+  // The entrance closest to the viewer
+  let frontY = height * 0.97;
+
+  // The far end of the opening
+  let backY = height * 0.62;
+
+  // Width of the opening at the front
+  let frontWidth = width * 0.55;
+
+  // Width of the opening at the back
+  let backWidth = width * 0.2;
+
+  ////////////////// DARK OPENING //////////////////
+
+  g.noStroke();
+  g.fill(2, 2, 4);
+
+  // Draw a trapezoid to create a hole in the floor
+  g.quad(
+    centerX - backWidth / 2,
+    backY,
+    centerX + backWidth / 2,
+    backY,
+    centerX + frontWidth / 2,
+    frontY,
+    centerX - frontWidth / 2,
+    frontY,
+  );
+
+  ////////////////// INNER SIDE WALLS //////////////////
+
+  // Left wall of the staircase opening
+  g.fill(13, 9, 9);
+
+  g.quad(
+    centerX - backWidth / 2,
+    backY,
+    centerX - frontWidth / 2,
+    frontY,
+    centerX - frontWidth / 2 + 17,
+    frontY,
+    centerX - backWidth / 2 + 10,
+    backY + 18,
+  );
+
+  // Right wall of the staircase opening
+  g.fill(9, 7, 8);
+
+  g.quad(
+    centerX + backWidth / 2,
+    backY,
+    centerX + frontWidth / 2,
+    frontY,
+    centerX + frontWidth / 2 - 17,
+    frontY,
+    centerX + backWidth / 2 - 10,
+    backY + 18,
+  );
+
+  ////////////////// FIVE STEPS //////////////////
+
+  for (let i = 0; i < numSteps; i++) {
+    // 0 means far away, 1 means close to viewer
     let t = i / (numSteps - 1);
 
-    let x = lerp(402, 548, t);
-    let y = lerp(268, 455, t);
+    // Compress the distant steps
+    let perspective = pow(t, 1.8);
 
-    let w = lerp(42, 165, t);
-    let h = lerp(8, 25, t);
-    let depth = lerp(8, 23, t);
+    // Position of each step
+    let y = lerp(backY + 45, frontY - 12, perspective);
 
-    // Vertical front of step
+    // Steps become wider toward the viewer
+    let w = lerp(backWidth * 0.55, frontWidth * 0.84, perspective);
+
+    // Step thickness
+    let h = lerp(2, 12, perspective);
+
+    // Depth of the wooden top surface
+    let depth = lerp(2, 10, perspective);
+
+    // Far steps are darker
+    let brightness = lerp(10, 75, pow(t, 1.6));
+
+    // Vertical front face of the step
     g.noStroke();
-    g.fill(36, 24, 20);
-
-    g.quad(x - w / 2, y, x + w / 2, y, x + w / 2, y + h, x - w / 2, y + h);
-
-    // Wooden top surface
-    g.fill(76, 53, 38);
+    g.fill(brightness * 0.55, brightness * 0.38, brightness * 0.28);
 
     g.quad(
-      x - w / 2,
+      centerX - w / 2,
       y,
-      x + w / 2,
+      centerX + w / 2,
       y,
-      x + w / 2 - 8,
+      centerX + w / 2,
+      y + h,
+      centerX - w / 2,
+      y + h,
+    );
+
+    // Wooden top surface
+    g.fill(brightness, brightness * 0.68, brightness * 0.48);
+
+    g.quad(
+      centerX - w / 2,
+      y,
+      centerX + w / 2,
+      y,
+      centerX + w / 2 - 4,
       y - depth,
-      x - w / 2 + 8,
+      centerX - w / 2 + 4,
       y - depth,
     );
 
-    // Worn edge
-    g.stroke(113, 82, 57, 140);
-    g.strokeWeight(1.5);
+    // Subtle worn edge
+    g.stroke(90, 65, 45, 70 * t);
+    g.strokeWeight(1);
 
-    g.line(x - w / 2, y, x + w / 2, y);
+    g.line(centerX - w / 2, y, centerX + w / 2, y);
   }
-}
 
-//////////////////// TABLE //////////////////////
+  ////////////////// STAIRCASE BORDER //////////////////
 
-function drawTable(g) {
-  let x = tablePosition.x;
-  let y = tablePosition.y;
+  // Dark wooden edges around the opening
+  g.noFill();
+  g.stroke(35, 23, 19);
+  g.strokeWeight(6);
 
-  // Table legs
-  g.stroke(39, 26, 19);
-  g.strokeWeight(5);
+  // Left edge
+  g.line(centerX - backWidth / 2, backY, centerX - frontWidth / 2, frontY);
 
-  g.line(x - 50, y - 30, x - 50, y + 8);
-  g.line(x + 50, y - 30, x + 50, y + 8);
-  g.line(x - 36, y - 40, x - 36, y - 10);
-  g.line(x + 36, y - 40, x + 36, y - 10);
+  // Right edge
+  g.line(centerX + backWidth / 2, backY, centerX + frontWidth / 2, frontY);
 
-  // Table surface
-  g.noStroke();
-  g.fill(70, 48, 33);
-
-  g.quad(x - 40, y - 46, x + 40, y - 46, x + 58, y - 30, x - 58, y - 30);
-
-  g.fill(49, 32, 24);
-  g.rect(x - 58, y - 30, 116, 6);
-
-  // Candle body
-  g.fill(205, 192, 163);
-  g.rect(x - 3, y - 58, 6, 14);
-
-  // Dusty cloth
-  g.fill(90, 84, 74, 120);
-  g.triangle(x - 20, y - 46, x + 10, y - 46, x - 2, y - 24);
+  // Back edge
+  g.line(centerX - backWidth / 2, backY, centerX + backWidth / 2, backY);
 }
 
 //////////////////// DISPLAY //////////////////////
@@ -339,38 +418,7 @@ function displayRoom() {
   image(roomGraphics, 0, 0);
 }
 
+// Select a random door for a creature
 function randomDoor() {
   return random(doors);
-}
-
-//////////////////// CANDLE //////////////////////
-
-function candlePos() {
-  return {
-    x: tablePosition.x + 2,
-    y: tablePosition.y - 62,
-  };
-}
-
-function displayCandle() {
-  let c = candlePos();
-  let flicker = random(0.8, 1.2);
-
-  let ctx = drawingContext;
-
-  let glow = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, 45 * flicker);
-
-  glow.addColorStop(0, "rgba(255,180,90,0.35)");
-  glow.addColorStop(1, "rgba(255,180,90,0)");
-
-  ctx.save();
-  ctx.fillStyle = glow;
-  ctx.fillRect(c.x - 55, c.y - 55, 110, 110);
-  ctx.restore();
-
-  // Flickering flame
-  noStroke();
-  fill(255, 210, 120);
-
-  ellipse(c.x + random(-0.6, 0.6), c.y, 4 * flicker, 9 * flicker);
 }

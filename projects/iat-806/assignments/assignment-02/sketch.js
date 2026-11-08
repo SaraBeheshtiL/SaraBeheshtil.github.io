@@ -30,9 +30,6 @@ function draw() {
 
   // Draw the haunted room
   displayRoom();
-
-  // Animated candle
-  displayCandle();
 }
 
 function gotFaces(results) {
