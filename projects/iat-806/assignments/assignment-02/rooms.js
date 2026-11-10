@@ -264,27 +264,22 @@ function setupRooms() {
     },
   ];
 
-  // make all six rooms with a loop
+  // make all six rooms with a loop (for loop for rooms array
   for (let d of roomData) {
     rooms.push(new Room(d));
   }
 }
 
-// the rooms that have a creature (now that's all six)
-function hauntedRooms() {
-  return rooms.filter((r) => r.spawn);
-}
-
+/// function below gives the room corresponds to the hand sign I defined
 function roomForSign(sign) {
   for (let r of rooms) {
     if (r.sign === sign) return r;
   }
-  return null;
 }
 
 //////////////////// PERSPECTIVE HELPERS //////////////////////
 
-// how tall the wall is at depth t
+// what is the height of the wall at depth t
 function wallH(t) {
   return lerp(height, BackWall.y2, t) - lerp(0, BackWall.y1, t);
 }
@@ -294,8 +289,9 @@ function raise(p, t, h) {
   return { x: p.x, y: p.y - wallH(t) * h };
 }
 
-// the empty box of a room: ceiling, floor, two walls, back wall
-function paintBox(g, wallL, wallR, floorC, ceilC, backC) {
+// a room as a box with five sides: ceiling, floor, two walls, back wall/////
+// this function is used to draw the rooms in the hidden canvas, and it is called by each room's creator function (paintHallway, paintBedroom, and so on.)
+function paintBox(hiddenCanvas, wallL, wallR, floorC, ceilC, backC) {
   let L0 = wallPoint("left", 0, 0),
     L0t = wallPoint("left", 0, 1);
   let L1 = wallPoint("left", 1, 0),
@@ -304,87 +300,87 @@ function paintBox(g, wallL, wallR, floorC, ceilC, backC) {
     R0t = wallPoint("right", 0, 1);
   let R1 = wallPoint("right", 1, 0),
     R1t = wallPoint("right", 1, 1);
-  g.background(0);
-  g.noStroke();
-  g.fill(ceilC);
-  g.quad(L0t.x, L0t.y, R0t.x, R0t.y, R1t.x, R1t.y, L1t.x, L1t.y);
-  g.fill(floorC);
-  g.quad(L0.x, L0.y, R0.x, R0.y, R1.x, R1.y, L1.x, L1.y);
-  g.fill(wallL);
-  g.quad(L0t.x, L0t.y, L1t.x, L1t.y, L1.x, L1.y, L0.x, L0.y);
-  g.fill(wallR);
-  g.quad(R0t.x, R0t.y, R1t.x, R1t.y, R1.x, R1.y, R0.x, R0.y);
-  g.fill(backC);
-  g.rect(
+  hiddenCanvas.background(0);
+  hiddenCanvas.noStroke();
+  hiddenCanvas.fill(ceilC);
+  hiddenCanvas.quad(L0t.x, L0t.y, R0t.x, R0t.y, R1t.x, R1t.y, L1t.x, L1t.y);
+  hiddenCanvas.fill(floorC);
+  hiddenCanvas.quad(L0.x, L0.y, R0.x, R0.y, R1.x, R1.y, L1.x, L1.y);
+  hiddenCanvas.fill(wallL);
+  hiddenCanvas.quad(L0t.x, L0t.y, L1t.x, L1t.y, L1.x, L1.y, L0.x, L0.y);
+  hiddenCanvas.fill(wallR);
+  hiddenCanvas.quad(R0t.x, R0t.y, R1t.x, R1t.y, R1.x, R1.y, R0.x, R0.y);
+  hiddenCanvas.fill(backC);
+  hiddenCanvas.rect(
     BackWall.x1,
     BackWall.y1,
     BackWall.x2 - BackWall.x1,
     BackWall.y2 - BackWall.y1,
   );
-  g.stroke(10, 8, 8);
-  g.strokeWeight(3);
-  g.line(0, 0, BackWall.x1, BackWall.y1);
-  g.line(width, 0, BackWall.x2, BackWall.y1);
-  g.line(0, height, BackWall.x1, BackWall.y2);
-  g.line(width, height, BackWall.x2, BackWall.y2);
+  hiddenCanvas.stroke(10, 8, 8);
+  hiddenCanvas.strokeWeight(3);
+  hiddenCanvas.line(0, 0, BackWall.x1, BackWall.y1);
+  hiddenCanvas.line(width, 0, BackWall.x2, BackWall.y1);
+  hiddenCanvas.line(0, height, BackWall.x1, BackWall.y2);
+  hiddenCanvas.line(width, height, BackWall.x2, BackWall.y2);
 }
 
 // a box standing on the floor (bed, sofa, fridge…)
 // u = left↔right, t = near↔far, h0..h1 = bottom↔top (fractions of wall height)
-function floorBox(g, u1, u2, t1, t2, h0, h1, topC, frontC, sideC) {
+function floorBox(hiddenCanvas, u1, u2, t1, t2, h0, h1, topC, frontC, sideC) {
   let p = (u, t, h) => raise(floorPoint(u, t), t, h);
-  g.noStroke();
+  hiddenCanvas.noStroke();
   // the side you can see (the one facing the middle of the room)
   let su = (u1 + u2) / 2 > 0.5 ? u1 : u2;
-  g.fill(sideC);
+  hiddenCanvas.fill(sideC);
   let a = p(su, t1, h0),
     b = p(su, t2, h0),
     c = p(su, t2, h1),
     d = p(su, t1, h1);
-  g.quad(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y);
+  hiddenCanvas.quad(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y);
   // front
-  g.fill(frontC);
+  hiddenCanvas.fill(frontC);
   a = p(u1, t1, h0);
   b = p(u2, t1, h0);
   c = p(u2, t1, h1);
   d = p(u1, t1, h1);
-  g.quad(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y);
+  hiddenCanvas.quad(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y);
   // top
-  g.fill(topC);
+  hiddenCanvas.fill(topC);
   a = p(u1, t1, h1);
   b = p(u2, t1, h1);
   c = p(u2, t2, h1);
   d = p(u1, t2, h1);
-  g.quad(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y);
+  hiddenCanvas.quad(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y);
 }
 
 // a flat shape stuck on a side wall (window, cabinet, picture)
-function wallRect(g, side, t1, t2, h1, h2, c) {
+function wallRect(hiddenCanvas, side, t1, t2, h1, h2, c) {
   let a = wallPoint(side, t1, h1),
     b = wallPoint(side, t2, h1);
   let cc = wallPoint(side, t2, h2),
     d = wallPoint(side, t1, h2);
-  g.fill(c);
-  g.quad(a.x, a.y, b.x, b.y, cc.x, cc.y, d.x, d.y);
+  hiddenCanvas.fill(c);
+  hiddenCanvas.quad(a.x, a.y, b.x, b.y, cc.x, cc.y, d.x, d.y);
 }
 
-function stains(g, n) {
-  g.noStroke();
+function stains(hiddenCanvas, n) {
+  hiddenCanvas.noStroke();
   for (let i = 0; i < n; i++) {
-    g.fill(10, 8, 6, 50);
+    hiddenCanvas.fill(10, 8, 6, 50);
     let p = wallPoint(
       random(["left", "right"]),
       random(0.05, 0.9),
       random(0.2, 0.95),
     );
-    g.ellipse(p.x, p.y, random(10, 40), random(20, 70));
+    hiddenCanvas.ellipse(p.x, p.y, random(10, 40), random(20, 70));
   }
 }
 
 //////////////////// HALLWAY //////////////////////
 // the first frame: a corridor with doors and the basement stairs
 
-function paintHallway(g) {
+function paintHallway(hiddenCanvas) {
   doors = [
     new Door("left", 0.18, 0.36, 0.72, true),
     new Door("left", 0.5, 0.63, 0.72, false),
@@ -395,14 +391,14 @@ function paintHallway(g) {
 
     new Door("back", 0, 0, 0.75, false),
   ];
-  drawRoom(g);
+  drawRoom(hiddenCanvas);
 }
 
 //////////////////// DRAW ROOM //////////////////////
 
-function drawRoom(g) {
-  g.background(8, 7, 10);
-  g.noStroke();
+function drawRoom(hiddenCanvas) {
+  hiddenCanvas.background(8, 7, 10);
+  hiddenCanvas.noStroke();
 
   // Left wall points
   let L0 = wallPoint("left", 0, 0);
@@ -417,29 +413,29 @@ function drawRoom(g) {
   let R1t = wallPoint("right", 1, 1);
 
   // Ceiling
-  g.fill(20, 18, 22);
+  hiddenCanvas.fill(20, 18, 22);
 
-  g.quad(L0t.x, L0t.y, R0t.x, R0t.y, R1t.x, R1t.y, L1t.x, L1t.y);
+  hiddenCanvas.quad(L0t.x, L0t.y, R0t.x, R0t.y, R1t.x, R1t.y, L1t.x, L1t.y);
 
   // Floor
-  g.fill(43, 29, 23);
+  hiddenCanvas.fill(43, 29, 23);
 
-  g.quad(L0.x, L0.y, R0.x, R0.y, R1.x, R1.y, L1.x, L1.y);
+  hiddenCanvas.quad(L0.x, L0.y, R0.x, R0.y, R1.x, R1.y, L1.x, L1.y);
 
   // Left wall
-  g.fill(51, 44, 40);
+  hiddenCanvas.fill(51, 44, 40);
 
-  g.quad(L0t.x, L0t.y, L1t.x, L1t.y, L1.x, L1.y, L0.x, L0.y);
+  hiddenCanvas.quad(L0t.x, L0t.y, L1t.x, L1t.y, L1.x, L1.y, L0.x, L0.y);
 
   // Right wall
-  g.fill(39, 34, 35);
+  hiddenCanvas.fill(39, 34, 35);
 
-  g.quad(R0t.x, R0t.y, R1t.x, R1t.y, R1.x, R1.y, R0.x, R0.y);
+  hiddenCanvas.quad(R0t.x, R0t.y, R1t.x, R1t.y, R1.x, R1.y, R0.x, R0.y);
 
   // Back wall
-  g.fill(35, 32, 34);
+  hiddenCanvas.fill(35, 32, 34);
 
-  g.rect(
+  hiddenCanvas.rect(
     BackWall.x1,
     BackWall.y1,
     BackWall.x2 - BackWall.x1,
@@ -447,39 +443,39 @@ function drawRoom(g) {
   );
 
   // Draw floorboards and wallpaper
-  drawFloorboards(g);
-  drawWallpaper(g);
+  drawFloorboards(hiddenCanvas);
+  drawWallpaper(hiddenCanvas);
 
   // Room corner edges
-  g.stroke(17, 13, 13);
-  g.strokeWeight(3);
+  hiddenCanvas.stroke(17, 13, 13);
+  hiddenCanvas.strokeWeight(3);
 
-  g.line(0, 0, BackWall.x1, BackWall.y1);
-  g.line(width, 0, BackWall.x2, BackWall.y1);
-  g.line(0, height, BackWall.x1, BackWall.y2);
-  g.line(width, height, BackWall.x2, BackWall.y2);
+  hiddenCanvas.line(0, 0, BackWall.x1, BackWall.y1);
+  hiddenCanvas.line(width, 0, BackWall.x2, BackWall.y1);
+  hiddenCanvas.line(0, height, BackWall.x1, BackWall.y2);
+  hiddenCanvas.line(width, height, BackWall.x2, BackWall.y2);
 
   // Draw all doors
   for (let door of doors) {
-    door.display(g);
+    door.display(hiddenCanvas);
   }
 
   // Draw basement staircase in the middle of floor
-  drawStairs(g);
+  drawStairs(hiddenCanvas);
 }
 
 //////////////////// FLOORBOARDS //////////////////////
 
 function drawFloorboards(g) {
-  g.stroke(23, 16, 13);
-  g.strokeWeight(1.5);
+  hiddenCanvas.stroke(23, 16, 13);
+  hiddenCanvas.strokeWeight(1.5);
 
   // Lines going toward the back wall
   for (let u = 0; u <= 1.001; u += 0.1) {
     let a = floorPoint(u, 0);
     let b = floorPoint(u, 1);
 
-    g.line(a.x, a.y, b.x, b.y);
+    hiddenCanvas.line(a.x, a.y, b.x, b.y);
   }
 
   // Horizontal floorboard divisions
@@ -487,22 +483,22 @@ function drawFloorboards(g) {
     let a = floorPoint(0, t);
     let b = floorPoint(1, t);
 
-    g.line(a.x, a.y, b.x, b.y);
+    hiddenCanvas.line(a.x, a.y, b.x, b.y);
   }
 }
 
 //////////////////// WALLPAPER //////////////////////
 
-function drawWallpaper(g) {
-  g.stroke(32, 29, 28);
-  g.strokeWeight(2);
+function drawWallpaper(hiddenCanvas) {
+  hiddenCanvas.stroke(32, 29, 28);
+  hiddenCanvas.strokeWeight(2);
 
   for (let t = 0.05; t < 1; t += 0.07) {
     for (let side of ["left", "right"]) {
       let a = wallPoint(side, t, 0);
       let b = wallPoint(side, t, 1);
 
-      g.line(a.x, a.y, b.x, b.y);
+      hiddenCanvas.line(a.x, a.y, b.x, b.y);
     }
   }
 }
@@ -513,7 +509,7 @@ function drawWallpaper(g) {
 
 //////////////////// BASEMENT STAIRCASE //////////////////////
 
-function drawStairs(g) {
+function drawStairs(hiddenCanvas) {
   // Five connected stairs
   let numSteps = 5;
 
@@ -531,10 +527,10 @@ function drawStairs(g) {
   ////////////////// FLOOR OPENING //////////////////
 
   // Black hole in the floor
-  g.noStroke();
-  g.fill(2, 2, 4);
+  hiddenCanvas.noStroke();
+  hiddenCanvas.fill(2, 2, 4);
 
-  g.quad(
+  hiddenCanvas.quad(
     centerX - backWidth / 2,
     backY,
     centerX + backWidth / 2,
@@ -550,9 +546,9 @@ function drawStairs(g) {
   // The vertical dark wall at the end of the stairs
   let backWallHeight = 30;
 
-  g.fill(5, 4, 6);
+  hiddenCanvas.fill(5, 4, 6);
 
-  g.quad(
+  hiddenCanvas.quad(
     centerX - backWidth / 2,
     backY,
     centerX + backWidth / 2,
@@ -603,10 +599,10 @@ function drawStairs(g) {
     let riser = lerp(3, 12, t);
 
     // Horizontal tread surface
-    g.noStroke();
-    g.fill(brightness, brightness * 0.68, brightness * 0.48);
+    hiddenCanvas.noStroke();
+    hiddenCanvas.fill(brightness, brightness * 0.68, brightness * 0.48);
 
-    g.quad(
+    hiddenCanvas.quad(
       far.left,
       far.y,
       far.right,
@@ -618,9 +614,9 @@ function drawStairs(g) {
     );
 
     // Vertical face of the step
-    g.fill(brightness * 0.48, brightness * 0.32, brightness * 0.24);
+    hiddenCanvas.fill(brightness * 0.48, brightness * 0.32, brightness * 0.24);
 
-    g.quad(
+    hiddenCanvas.quad(
       near.left,
       near.y - riser,
       near.right,
@@ -632,19 +628,19 @@ function drawStairs(g) {
     );
 
     // Subtle line on the wooden edge
-    g.stroke(110, 78, 53, 90 * t);
-    g.strokeWeight(1);
+    hiddenCanvas.stroke(110, 78, 53, 90 * t);
+    hiddenCanvas.strokeWeight(1);
 
-    g.line(near.left, near.y - riser, near.right, near.y - riser);
+    hiddenCanvas.line(near.left, near.y - riser, near.right, near.y - riser);
   }
 
   ////////////////// SIDE WALLS //////////////////
 
   // Left wall
-  g.noStroke();
-  g.fill(12, 9, 10, 190);
+  hiddenCanvas.noStroke();
+  hiddenCanvas.fill(12, 9, 10, 190);
 
-  g.quad(
+  hiddenCanvas.quad(
     centerX - backWidth / 2,
     backY,
     centerX - frontWidth / 2,
@@ -656,9 +652,9 @@ function drawStairs(g) {
   );
 
   // Right wall
-  g.fill(9, 7, 8, 190);
+  hiddenCanvas.fill(9, 7, 8, 190);
 
-  g.quad(
+  hiddenCanvas.quad(
     centerX + backWidth / 2,
     backY,
     centerX + frontWidth / 2,
@@ -671,18 +667,33 @@ function drawStairs(g) {
 
   ////////////////// OUTER EDGES //////////////////
 
-  g.noFill();
-  g.stroke(38, 25, 20);
-  g.strokeWeight(5);
+  hiddenCanvas.noFill();
+  hiddenCanvas.stroke(38, 25, 20);
+  hiddenCanvas.strokeWeight(5);
 
   // Left diagonal edge
-  g.line(centerX - backWidth / 2, backY, centerX - frontWidth / 2, frontY);
+  hiddenCanvas.line(
+    centerX - backWidth / 2,
+    backY,
+    centerX - frontWidth / 2,
+    frontY,
+  );
 
   // Right diagonal edge
-  g.line(centerX + backWidth / 2, backY, centerX + frontWidth / 2, frontY);
+  hiddenCanvas.line(
+    centerX + backWidth / 2,
+    backY,
+    centerX + frontWidth / 2,
+    frontY,
+  );
 
   // Back horizontal edge
-  g.line(centerX - backWidth / 2, backY, centerX + backWidth / 2, backY);
+  hiddenCanvas.line(
+    centerX - backWidth / 2,
+    backY,
+    centerX + backWidth / 2,
+    backY,
+  );
 }
 
 //////////////////// BEDROOM //////////////////////
@@ -690,7 +701,7 @@ function drawStairs(g) {
 
 function paintBedroom(g) {
   paintBox(
-    g,
+    hiddenCanvas,
     color(44, 46, 56),
     color(36, 38, 48),
     color(42, 31, 25),
@@ -699,33 +710,33 @@ function paintBedroom(g) {
   );
 
   // floorboards
-  g.stroke(26, 18, 14);
-  g.strokeWeight(1.5);
+  hiddenCanvas.stroke(26, 18, 14);
+  hiddenCanvas.strokeWeight(1.5);
   for (let u = 0; u <= 1.001; u += 0.1) {
     let a = floorPoint(u, 0),
       b = floorPoint(u, 1);
-    g.line(a.x, a.y, b.x, b.y);
+    hiddenCanvas.line(a.x, a.y, b.x, b.y);
   }
 
   // window with moonlight on the back wall
-  g.noStroke();
-  g.fill(25, 38, 62);
-  g.rect(288, 168, 64, 52);
-  g.stroke(30, 25, 22);
-  g.strokeWeight(3);
-  g.noFill();
-  g.rect(288, 168, 64, 52);
-  g.line(320, 168, 320, 220);
-  g.line(288, 194, 352, 194);
-  g.noStroke();
-  g.fill(200, 210, 255, 20);
-  g.quad(288, 220, 352, 220, 420, 330, 300, 330);
+  hiddenCanvas.noStroke();
+  hiddenCanvas.fill(25, 38, 62);
+  hiddenCanvas.rect(288, 168, 64, 52);
+  hiddenCanvas.stroke(30, 25, 22);
+  hiddenCanvas.strokeWeight(3);
+  hiddenCanvas.noFill();
+  hiddenCanvas.rect(288, 168, 64, 52);
+  hiddenCanvas.line(320, 168, 320, 220);
+  hiddenCanvas.line(288, 194, 352, 194);
+  hiddenCanvas.noStroke();
+  hiddenCanvas.fill(200, 210, 255, 20);
+  hiddenCanvas.quad(288, 220, 352, 220, 420, 330, 300, 330);
 
-  stains(g, 15);
+  stains(hiddenCanvas, 15);
 
   // nightstand (the key is on top)
   floorBox(
-    g,
+    hiddenCanvas,
     0.02,
     0.14,
     0.35,
@@ -738,9 +749,20 @@ function paintBedroom(g) {
   );
 
   // the bed: black gap underneath, then frame, then mattress
-  floorBox(g, 0.55, 0.95, 0.22, 0.65, 0, 0.07, color(0), color(0), color(0));
   floorBox(
-    g,
+    hiddenCanvas,
+    0.55,
+    0.95,
+    0.22,
+    0.65,
+    0,
+    0.07,
+    color(0),
+    color(0),
+    color(0),
+  );
+  floorBox(
+    hiddenCanvas,
     0.55,
     0.95,
     0.22,
@@ -756,10 +778,10 @@ function paintBedroom(g) {
   let b = raise(floorPoint(0.95, 0.65), 0.65, 0.07);
   let c = raise(floorPoint(0.95, 0.65), 0.65, 0.34);
   let d = raise(floorPoint(0.55, 0.65), 0.65, 0.34);
-  g.fill(58, 40, 30);
-  g.quad(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y);
+  hiddenCanvas.fill(58, 40, 30);
+  hiddenCanvas.quad(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y);
   floorBox(
-    g,
+    hiddenCanvas,
     0.56,
     0.94,
     0.23,
@@ -772,21 +794,21 @@ function paintBedroom(g) {
   );
   // pillow
   let pl = raise(floorPoint(0.75, 0.6), 0.6, 0.22);
-  g.fill(175, 170, 160);
-  g.ellipse(pl.x, pl.y, 60, 16);
+  hiddenCanvas.fill(175, 170, 160);
+  hiddenCanvas.ellipse(pl.x, pl.y, 60, 16);
   // blanket hanging down over the gap a little
   let f1 = raise(floorPoint(0.55, 0.22), 0.22, 0.14);
   let f2 = raise(floorPoint(0.95, 0.22), 0.22, 0.14);
-  g.fill(120, 114, 104);
-  g.quad(f1.x, f1.y, f2.x, f2.y, f2.x, f2.y + 14, f1.x, f1.y + 8);
+  hiddenCanvas.fill(120, 114, 104);
+  hiddenCanvas.quad(f1.x, f1.y, f2.x, f2.y, f2.x, f2.y + 14, f1.x, f1.y + 8);
 }
 
 //////////////////// KITCHEN //////////////////////
 // a creature stands in the empty corner
 
-function paintKitchen(g) {
+function paintKitchen(hiddenCanvas) {
   paintBox(
-    g,
+    hiddenCanvas,
     color(52, 48, 38),
     color(44, 40, 32),
     color(40, 38, 34),
@@ -795,7 +817,7 @@ function paintKitchen(g) {
   );
 
   // checkered floor tiles
-  g.noStroke();
+  hiddenCanvas.noStroke();
   let steps = 10;
   for (let i = 0; i < 8; i++) {
     for (let j = 0; j < steps; j++) {
@@ -807,14 +829,16 @@ function paintKitchen(g) {
         b = floorPoint(u2, t1);
       let c = floorPoint(u2, t2),
         d = floorPoint(u1, t2);
-      g.fill((i + j) % 2 === 0 ? color(58, 55, 50) : color(26, 24, 22));
-      g.quad(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y);
+      hiddenCanvas.fill(
+        (i + j) % 2 === 0 ? color(58, 55, 50) : color(26, 24, 22),
+      );
+      hiddenCanvas.quad(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y);
     }
   }
 
   // counters along the left wall
   floorBox(
-    g,
+    hiddenCanvas,
     0,
     0.2,
     0.05,
@@ -826,30 +850,30 @@ function paintKitchen(g) {
     color(66, 55, 44),
   );
   // cabinet door lines
-  g.stroke(35, 28, 22);
-  g.strokeWeight(2);
+  hiddenCanvas.stroke(35, 28, 22);
+  hiddenCanvas.strokeWeight(2);
   for (let t = 0.1; t < 0.8; t += 0.12) {
     let a = raise(floorPoint(0.2, t), t, 0.02);
     let b = raise(floorPoint(0.2, t), t, 0.27);
-    g.line(a.x, a.y, b.x, b.y);
+    hiddenCanvas.line(a.x, a.y, b.x, b.y);
   }
   // upper cabinets
-  g.noStroke();
-  wallRect(g, "left", 0.05, 0.8, 0.55, 0.85, color(62, 52, 42));
-  g.stroke(35, 28, 22);
+  hiddenCanvas.noStroke();
+  wallRect(hiddenCanvas, "left", 0.05, 0.8, 0.55, 0.85, color(62, 52, 42));
+  hiddenCanvas.stroke(35, 28, 22);
   for (let t = 0.05; t < 0.8; t += 0.15) {
     let a = wallPoint("left", t, 0.55),
       b = wallPoint("left", t, 0.85);
-    g.line(a.x, a.y, b.x, b.y);
+    hiddenCanvas.line(a.x, a.y, b.x, b.y);
   }
   // a hook for the key
   let hook = wallPoint("left", 0.3, 0.53);
-  g.stroke(120, 110, 90);
-  g.line(hook.x, hook.y - 6, hook.x, hook.y);
+  hiddenCanvas.stroke(120, 110, 90);
+  hiddenCanvas.line(hook.x, hook.y - 6, hook.x, hook.y);
 
   // fridge on the right
   floorBox(
-    g,
+    hiddenCanvas,
     0.8,
     1,
     0.12,
@@ -862,93 +886,98 @@ function paintKitchen(g) {
   );
   let h1 = raise(floorPoint(0.83, 0.12), 0.12, 0.45);
   let h2 = raise(floorPoint(0.83, 0.12), 0.12, 0.65);
-  g.stroke(60);
-  g.strokeWeight(4);
-  g.line(h1.x, h1.y, h2.x, h2.y);
+  hiddenCanvas.stroke(60);
+  hiddenCanvas.strokeWeight(4);
+  hiddenCanvas.line(h1.x, h1.y, h2.x, h2.y);
 
   // small dirty window on the back wall
-  g.noStroke();
-  g.fill(20, 24, 30);
-  g.rect(262, 170, 50, 40);
+  hiddenCanvas.noStroke();
+  hiddenCanvas.fill(20, 24, 30);
+  hiddenCanvas.rect(262, 170, 50, 40);
 
   // the empty corner: something has scratched the wall
-  g.stroke(20, 16, 12);
-  g.strokeWeight(1.5);
+  hiddenCanvas.stroke(20, 16, 12);
+  hiddenCanvas.strokeWeight(1.5);
   for (let i = 0; i < 6; i++) {
     let x = BackWall.x2 - 30 + i * 4;
-    g.line(x, BackWall.y2 - 90, x + 6, BackWall.y2 - 40);
+    hiddenCanvas.line(x, BackWall.y2 - 90, x + 6, BackWall.y2 - 40);
   }
 
   // hanging lamp (off)
-  g.stroke(20);
-  g.strokeWeight(2);
-  g.line(320, 0, 320, 70);
-  g.noStroke();
-  g.fill(40, 38, 32);
-  g.triangle(300, 90, 340, 90, 320, 68);
+  hiddenCanvas.stroke(20);
+  hiddenCanvas.strokeWeight(2);
+  hiddenCanvas.line(320, 0, 320, 70);
+  hiddenCanvas.noStroke();
+  hiddenCanvas.fill(40, 38, 32);
+  hiddenCanvas.triangle(300, 90, 340, 90, 320, 68);
 
-  stains(g, 12);
+  stains(hiddenCanvas, 12);
 }
 
 //////////////////// BATHROOM //////////////////////
 // you stand at the mirror. you see yourself… and something behind you
 
-function paintBathroom(g) {
-  g.background(48, 54, 52);
+function paintBathroom(hiddenCanvas) {
+  hiddenCanvas.background(48, 54, 52);
   // tiles
-  g.stroke(36, 40, 38);
-  g.strokeWeight(2);
-  for (let x = 0; x < width; x += 32) g.line(x, 0, x, 330);
-  for (let y = 0; y < 330; y += 32) g.line(0, y, width, y);
+  hiddenCanvas.stroke(36, 40, 38);
+  hiddenCanvas.strokeWeight(2);
+  for (let x = 0; x < width; x += 32) hiddenCanvas.line(x, 0, x, 330);
+  for (let y = 0; y < 330; y += 32) hiddenCanvas.line(0, y, width, y);
   // floor
-  g.noStroke();
-  g.fill(30, 32, 31);
-  g.rect(0, 330, width, 150);
-  g.stroke(20);
+  hiddenCanvas.noStroke();
+  hiddenCanvas.fill(30, 32, 31);
+  hiddenCanvas.rect(0, 330, width, 150);
+  hiddenCanvas.stroke(20);
   for (let i = -6; i <= 6; i++) {
-    g.line(320 + i * 40, 330, 320 + i * 120, 480);
+    hiddenCanvas.line(320 + i * 40, 330, 320 + i * 120, 480);
   }
   // mirror frame (the glass is drawn live, it shows the webcam)
-  g.noStroke();
-  g.fill(25, 22, 20);
-  g.rect(160, 30, 320, 245, 6);
+  hiddenCanvas.noStroke();
+  hiddenCanvas.fill(25, 22, 20);
+  hiddenCanvas.rect(160, 30, 320, 245, 6);
   // sink counter
-  g.fill(150, 150, 142);
-  g.rect(130, 290, 380, 26, 4);
-  g.fill(70, 70, 66);
-  g.rect(150, 316, 340, 90);
-  g.fill(110, 112, 106);
-  g.ellipse(320, 300, 150, 22);
-  g.fill(40, 42, 40);
-  g.ellipse(320, 302, 120, 14);
+  hiddenCanvas.fill(150, 150, 142);
+  hiddenCanvas.rect(130, 290, 380, 26, 4);
+  hiddenCanvas.fill(70, 70, 66);
+  hiddenCanvas.rect(150, 316, 340, 90);
+  hiddenCanvas.fill(110, 112, 106);
+  hiddenCanvas.ellipse(320, 300, 150, 22);
+  hiddenCanvas.fill(40, 42, 40);
+  hiddenCanvas.ellipse(320, 302, 120, 14);
   // tap
-  g.fill(120);
-  g.rect(314, 276, 12, 16, 3);
+  hiddenCanvas.fill(120);
+  hiddenCanvas.rect(314, 276, 12, 16, 3);
   // shelf on the right (the key is here)
-  g.fill(70, 55, 40);
-  g.rect(520, 238, 100, 10);
-  g.fill(140, 130, 110);
-  g.rect(590, 205, 14, 33, 3);
+  hiddenCanvas.fill(70, 55, 40);
+  hiddenCanvas.rect(520, 238, 100, 10);
+  hiddenCanvas.fill(140, 130, 110);
+  hiddenCanvas.rect(590, 205, 14, 33, 3);
   // towel
-  g.fill(110, 100, 90);
-  g.rect(30, 140, 70, 140, 4);
-  g.stroke(80, 72, 64);
-  g.strokeWeight(2);
-  g.line(30, 150, 100, 150);
+  hiddenCanvas.fill(110, 100, 90);
+  hiddenCanvas.rect(30, 140, 70, 140, 4);
+  hiddenCanvas.stroke(80, 72, 64);
+  hiddenCanvas.strokeWeight(2);
+  hiddenCanvas.line(30, 150, 100, 150);
   // grime
-  g.noStroke();
+  hiddenCanvas.noStroke();
   for (let i = 0; i < 20; i++) {
-    g.fill(20, 24, 20, 60);
-    g.ellipse(random(width), random(0, 330), random(10, 40), random(20, 60));
+    hiddenCanvas.fill(20, 24, 20, 60);
+    hiddenCanvas.ellipse(
+      random(width),
+      random(0, 330),
+      random(10, 40),
+      random(20, 60),
+    );
   }
 }
 
 //////////////////// LIVING ROOM //////////////////////
 // the creature crawls on the ceiling
 
-function paintLivingRoom(g) {
+function paintLivingRoom(hiddenCanvas) {
   paintBox(
-    g,
+    hiddenCanvas,
     color(58, 30, 30),
     color(48, 25, 26),
     color(44, 34, 30),
@@ -957,24 +986,24 @@ function paintLivingRoom(g) {
   );
 
   // cracks and stains on the ceiling (that's where it lives)
-  g.stroke(18, 15, 14);
-  g.strokeWeight(1.5);
+  hiddenCanvas.stroke(18, 15, 14);
+  hiddenCanvas.strokeWeight(1.5);
   for (let i = 0; i < 8; i++) {
     let x = random(80, 560),
       y = random(10, 130);
-    g.noFill();
-    g.beginShape();
+    hiddenCanvas.noFill();
+    hiddenCanvas.beginShape();
     for (let k = 0; k < 6; k++) {
-      g.vertex(x, y);
+      hiddenCanvas.vertex(x, y);
       x += random(-25, 25);
       y += random(-10, 10);
     }
-    g.endShape();
+    hiddenCanvas.endShape();
   }
-  g.noStroke();
+  hiddenCanvas.noStroke();
   for (let i = 0; i < 6; i++) {
-    g.fill(15, 12, 10, 70);
-    g.ellipse(
+    hiddenCanvas.fill(15, 12, 10, 70);
+    hiddenCanvas.ellipse(
       random(100, 540),
       random(20, 130),
       random(30, 80),
@@ -983,40 +1012,73 @@ function paintLivingRoom(g) {
   }
 
   // wallpaper stripes
-  g.stroke(40, 20, 22);
-  g.strokeWeight(2);
+  hiddenCanvas.stroke(40, 20, 22);
+  hiddenCanvas.strokeWeight(2);
   for (let t = 0.05; t < 1; t += 0.07) {
     for (let side of ["left", "right"]) {
       let a = wallPoint(side, t, 0),
         b = wallPoint(side, t, 1);
-      g.line(a.x, a.y, b.x, b.y);
+      hiddenCanvas.line(a.x, a.y, b.x, b.y);
     }
   }
 
   // rug
-  g.noStroke();
+  hiddenCanvas.noStroke();
   let r1 = floorPoint(0.25, 0.3),
     r2 = floorPoint(0.75, 0.3);
   let r3 = floorPoint(0.75, 0.7),
     r4 = floorPoint(0.25, 0.7);
-  g.fill(70, 28, 26);
-  g.quad(r1.x, r1.y, r2.x, r2.y, r3.x, r3.y, r4.x, r4.y);
+  hiddenCanvas.fill(70, 28, 26);
+  hiddenCanvas.quad(r1.x, r1.y, r2.x, r2.y, r3.x, r3.y, r4.x, r4.y);
 
   // sofa against the back wall
   let sofaTop = color(56, 66, 48),
     sofaFront = color(44, 52, 38),
     sofaSide = color(38, 45, 33);
-  floorBox(g, 0.25, 0.75, 0.8, 0.96, 0, 0.16, sofaTop, sofaFront, sofaSide);
+  floorBox(
+    hiddenCanvas,
+    0.25,
+    0.75,
+    0.8,
+    0.96,
+    0,
+    0.16,
+    sofaTop,
+    sofaFront,
+    sofaSide,
+  );
   let a = raise(floorPoint(0.25, 0.96), 0.96, 0.16),
     b = raise(floorPoint(0.75, 0.96), 0.96, 0.16);
-  g.fill(48, 57, 41);
-  g.quad(a.x, a.y, b.x, b.y, b.x, b.y - 26, a.x, a.y - 26);
-  floorBox(g, 0.25, 0.3, 0.8, 0.96, 0, 0.24, sofaTop, sofaFront, sofaSide);
-  floorBox(g, 0.7, 0.75, 0.8, 0.96, 0, 0.24, sofaTop, sofaFront, sofaSide);
+  hiddenCanvas.fill(48, 57, 41);
+  hiddenCanvas.quad(a.x, a.y, b.x, b.y, b.x, b.y - 26, a.x, a.y - 26);
+  floorBox(
+    hiddenCanvas,
+    0.25,
+    0.3,
+    0.8,
+    0.96,
+    0,
+    0.24,
+    sofaTop,
+    sofaFront,
+    sofaSide,
+  );
+  floorBox(
+    hiddenCanvas,
+    0.7,
+    0.75,
+    0.8,
+    0.96,
+    0,
+    0.24,
+    sofaTop,
+    sofaFront,
+    sofaSide,
+  );
 
   // old TV on a little table (the key is on top of the TV)
   floorBox(
-    g,
+    hiddenCanvas,
     0.04,
     0.2,
     0.3,
@@ -1028,7 +1090,7 @@ function paintLivingRoom(g) {
     color(42, 29, 21),
   );
   floorBox(
-    g,
+    hiddenCanvas,
     0.06,
     0.18,
     0.33,
@@ -1043,54 +1105,54 @@ function paintLivingRoom(g) {
     s2 = raise(floorPoint(0.18, 0.41), 0.41, 0.19);
   let s3 = raise(floorPoint(0.18, 0.41), 0.41, 0.34),
     s4 = raise(floorPoint(0.18, 0.34), 0.34, 0.34);
-  g.fill(70, 80, 85);
-  g.quad(s1.x, s1.y, s2.x, s2.y, s3.x, s3.y, s4.x, s4.y);
+  hiddenCanvas.fill(70, 80, 85);
+  hiddenCanvas.quad(s1.x, s1.y, s2.x, s2.y, s3.x, s3.y, s4.x, s4.y);
 
   // picture frames on the right wall
-  wallRect(g, "right", 0.3, 0.45, 0.5, 0.75, color(70, 55, 35));
-  wallRect(g, "right", 0.32, 0.43, 0.53, 0.72, color(30, 28, 26));
+  wallRect(hiddenCanvas, "right", 0.3, 0.45, 0.5, 0.75, color(70, 55, 35));
+  wallRect(hiddenCanvas, "right", 0.32, 0.43, 0.53, 0.72, color(30, 28, 26));
 
   // chandelier
-  g.stroke(30);
-  g.strokeWeight(2);
-  g.line(320, 0, 320, 40);
-  g.noFill();
-  g.arc(320, 40, 60, 20, 0, PI);
+  hiddenCanvas.stroke(30);
+  hiddenCanvas.strokeWeight(2);
+  hiddenCanvas.line(320, 0, 320, 40);
+  hiddenCanvas.noFill();
+  hiddenCanvas.arc(320, 40, 60, 20, 0, PI);
 }
 
 //////////////////// BASEMENT //////////////////////
 // you stand on the stairs looking down. something crawls up.
 
-function paintBasement(g) {
-  g.background(0);
+function paintBasement(hiddenCanvas) {
+  hiddenCanvas.background(0);
   let fx1 = 270,
     fx2 = 370,
     fy1 = 250,
     fy2 = 330; // the dark opening at the bottom
 
-  g.noStroke();
-  g.fill(40, 30, 26);
-  g.quad(0, 0, fx1, fy1, fx1, fy2, 0, height); // left wall
-  g.fill(34, 26, 22);
-  g.quad(width, 0, fx2, fy1, fx2, fy2, width, height); // right wall
-  g.fill(16, 14, 13);
-  g.quad(0, 0, width, 0, fx2, fy1, fx1, fy1); // ceiling
-  g.fill(2);
-  g.rect(fx1, fy1, fx2 - fx1, fy2 - fy1); // the basement, pitch black
+  hiddenCanvas.noStroke();
+  hiddenCanvas.fill(40, 30, 26);
+  hiddenCanvas.quad(0, 0, fx1, fy1, fx1, fy2, 0, height); // left wall
+  hiddenCanvas.fill(34, 26, 22);
+  hiddenCanvas.quad(width, 0, fx2, fy1, fx2, fy2, width, height); // right wall
+  hiddenCanvas.fill(16, 14, 13);
+  hiddenCanvas.quad(0, 0, width, 0, fx2, fy1, fx1, fy1); // ceiling
+  hiddenCanvas.fill(2);
+  hiddenCanvas.rect(fx1, fy1, fx2 - fx1, fy2 - fy1); // the basement, pitch black
 
   // bricks on the walls
-  g.stroke(22, 16, 13);
-  g.strokeWeight(1.5);
+  hiddenCanvas.stroke(22, 16, 13);
+  hiddenCanvas.strokeWeight(1.5);
   for (let i = 1; i < 14; i++) {
     let h = i / 14;
-    g.line(0, lerp(0, height, h), fx1, lerp(fy1, fy2, h));
-    g.line(width, lerp(0, height, h), fx2, lerp(fy1, fy2, h));
+    hiddenCanvas.line(0, lerp(0, height, h), fx1, lerp(fy1, fy2, h));
+    hiddenCanvas.line(width, lerp(0, height, h), fx2, lerp(fy1, fy2, h));
   }
   for (let t = 0.1; t < 1; t += 0.15) {
     let xl = lerp(0, fx1, t),
       xr = lerp(width, fx2, t);
-    g.line(xl, lerp(0, fy1, t), xl, lerp(height, fy2, t));
-    g.line(xr, lerp(0, fy1, t), xr, lerp(height, fy2, t));
+    hiddenCanvas.line(xl, lerp(0, fy1, t), xl, lerp(height, fy2, t));
+    hiddenCanvas.line(xr, lerp(0, fy1, t), xr, lerp(height, fy2, t));
   }
 
   // the stairs going down
@@ -1104,9 +1166,9 @@ function paintBasement(g) {
     let wFar = lerp(fx2 - fx1, width * 0.9, a),
       wNear = lerp(fx2 - fx1, width * 0.9, b);
     let shade = lerp(12, 70, a);
-    g.noStroke();
-    g.fill(shade, shade * 0.75, shade * 0.6);
-    g.quad(
+    hiddenCanvas.noStroke();
+    hiddenCanvas.fill(shade, shade * 0.75, shade * 0.6);
+    hiddenCanvas.quad(
       320 - wFar / 2,
       yFar,
       320 + wFar / 2,
@@ -1116,28 +1178,28 @@ function paintBasement(g) {
       320 - wNear / 2,
       yNear,
     );
-    g.stroke(shade * 0.3);
-    g.strokeWeight(2);
-    g.line(320 - wFar / 2, yFar, 320 + wFar / 2, yFar);
+    hiddenCanvas.stroke(shade * 0.3);
+    hiddenCanvas.strokeWeight(2);
+    hiddenCanvas.line(320 - wFar / 2, yFar, 320 + wFar / 2, yFar);
   }
 
   // pipes along the ceiling
-  g.stroke(50, 45, 40);
-  g.strokeWeight(6);
-  g.line(40, 20, fx1 + 10, fy1 - 8);
-  g.strokeWeight(4);
-  g.line(600, 30, fx2 - 10, fy1 - 6);
+  hiddenCanvas.stroke(50, 45, 40);
+  hiddenCanvas.strokeWeight(6);
+  hiddenCanvas.line(40, 20, fx1 + 10, fy1 - 8);
+  hiddenCanvas.strokeWeight(4);
+  hiddenCanvas.line(600, 30, fx2 - 10, fy1 - 6);
 
   // a nail for the key
-  g.stroke(120);
-  g.strokeWeight(3);
-  g.point(88, 202);
+  hiddenCanvas.stroke(120);
+  hiddenCanvas.strokeWeight(3);
+  hiddenCanvas.point(88, 202);
 
   // dead light bulb
-  g.stroke(30);
-  g.strokeWeight(1.5);
-  g.line(320, 0, 320, 120);
-  g.noStroke();
-  g.fill(60, 58, 50);
-  g.ellipse(320, 128, 14, 18);
+  hiddenCanvas.stroke(30);
+  hiddenCanvas.strokeWeight(1.5);
+  hiddenCanvas.line(320, 0, 320, 120);
+  hiddenCanvas.noStroke();
+  hiddenCanvas.fill(60, 58, 50);
+  hiddenCanvas.ellipse(320, 128, 14, 18);
 }
