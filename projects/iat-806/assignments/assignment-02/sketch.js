@@ -1,49 +1,58 @@
-/// FLASHLIGHT — a horror body game
-// A dark room full of doors. Things come out of them.
-// They only move when you are NOT looking at them.
+//////////////////// THE HAUNTED HOUSE //////////////////////
+// A headlamp on your forehead. Turn your head to look around.
+// Close your eyes = the light goes out.
+// Things only move when you are not looking at them.
+// Escape all six rooms (the hallway too) in 2 minutes.
 //
-// Version 1: the MOUSE is the flashlight.
-// Later: handPose moves the light (see updateInputs()).
+// Files:  house.js    the Room class + all six rooms (hallway + five)
+//         creature.js Creature, Key, Dust classes
+//         body.js     faceMesh + handPose
+//         sketch.js   this file: game states
 
-let gameState = "start"; // "start", "playing", "gameOver", "win"
+let gameState = "start"; // "start", "hallway", "room", "caught", "ghost", "win"
 
 let video;
+let currentRoom; // the Room object you are in (the hallway is a room too)
+let hallway; // the first frame
 let creatures = [];
+let dust = [];
 
-let lives = 3;
-let score = 0;
-let gameLength = 60; // seconds to survive
-let timeLeft = gameLength;
+const TOTAL_TIME = 120; // seconds
 let startTime = 0;
-let level = 1;
+let penalty = 0; // seconds lost when a creature gets you
+let timeLeft = TOTAL_TIME;
 
-let lastSpawn = 0;
-let spawnInterval = 3000; // ms between new creatures
-
-let lightX, lightY; // the flashlight (later: your hand)
-let lightRadius = 130;
-
+let closedEyesFrames = 0; // on the start screen: close your eyes to enter
+let roomTitleTimer = 0;
 let hurtFlash = 0;
+let scareImg = null;
+let scareTimer = 0;
+let caughtTimer = 0;
 
 // ---------- horror images ----------
-// Put image files next to index.html with these names.
-// Missing ones are skipped (then she falls back to the drawn ghost).
-let ghostFiles = ["ghost1.png", "ghost2.png", "ghost3.png"];
-let ghostRaw = [];
-let ghostImages = [];
-
+// One photo per room. Missing ones are replaced by another photo,
+// or by a drawn face if there are none at all.
+let ghostFiles = [
+  "ghost1.png",
+  "ghost2.png",
+  "ghost3.png",
+  "ghost4.png",
+  "ghost5.png",
+  "ghost6.png",
+];
+let ghostRaw = {};
+let ghostImages = {};
 let grainFrames = [];
-let scareImg = null; // the face that jumps at you
-let scareTimer = 0;
 
 function preload() {
   for (let f of ghostFiles) {
     loadImage(
       f,
-      (img) => ghostRaw.push(img),
-      () => console.log("Could not load " + f),
+      (img) => (ghostRaw[f] = img),
+      () => console.log("No " + f + " (that's ok)"),
     );
   }
+  preloadBody();
 }
 
 function setup() {
@@ -53,99 +62,71 @@ function setup() {
   video.hide();
   textFont("monospace");
 
-  setupRoom(); // builds the doors and draws the room once (room.js)
+  setupRooms(); // all six rooms, from house.js
+  hallway = roomForSign("bothClosed");
+  currentRoom = hallway;
+  setupBody(); // start faceMesh + handPose
 
-  for (let img of ghostRaw) {
-    ghostImages.push(prepareGhost(img));
+  for (let f in ghostRaw) {
+    ghostImages[f] = prepareGhost(ghostRaw[f]);
   }
-
-  // a few frames of film grain to flicker between
-  for (let i = 0; i < 4; i++) {
-    let g = createGraphics(width / 2, height / 2);
-    g.pixelDensity(1);
-    g.loadPixels();
-    for (let p = 0; p < g.pixels.length; p += 4) {
-      let v = random(255);
-      g.pixels[p] = v;
-      g.pixels[p + 1] = v;
-      g.pixels[p + 2] = v;
-      g.pixels[p + 3] = random(45);
-    }
-    g.updatePixels();
-    grainFrames.push(g);
-  }
+  makeGrain();
 }
 
 function draw() {
   background(0);
-  updateInputs();
+  updateBody(gameState === "start");
 
   if (gameState === "start") {
-    drawStartScreen();
-  } else if (gameState === "playing") {
-    playGame();
-  } else if (gameState === "gameOver") {
-    drawEndScreen(false);
+    drawStart();
+  } else if (gameState === "hallway" || gameState === "room") {
+    playFrame();
+  } else if (gameState === "caught") {
+    drawCaught();
+  } else if (gameState === "ghost") {
+    drawGhostEnding();
   } else if (gameState === "win") {
-    drawEndScreen(true);
+    drawWin();
   }
 }
 
-// ---------- INPUT: swap the mouse for your body here ----------
-function updateInputs() {
-  lightX = mouseX;
-  lightY = mouseY;
-  // LATER (handPose): if (hands.length > 0) { lightX = hands[0].keypoints[9].x; lightY = hands[0].keypoints[9].y; }
-}
+//////////////////// PLAYING //////////////////////
 
-// ---------- THE GAME ----------
-function playGame() {
-  displayRoom();
-
-  // timer and levels — harder every 15 seconds
-  let elapsed = (millis() - startTime) / 1000;
-  timeLeft = max(0, gameLength - floor(elapsed));
-  level = 1 + floor(elapsed / 15);
-  spawnInterval = max(1000, 3000 - (level - 1) * 600);
-  let maxCreatures = 2 + level;
-
-  // ADD a creature at a random door
-  if (millis() - lastSpawn > spawnInterval && creatures.length < maxCreatures) {
-    creatures.push(new Creature(randomDoor(), 0.035 + level * 0.012));
-    lastSpawn = millis();
+function playFrame() {
+  // ---- the clock ----
+  timeLeft = TOTAL_TIME - (millis() - startTime) / 1000 - penalty;
+  if (timeLeft <= 0) {
+    timeLeft = 0;
+    gameState = "caught";
+    caughtTimer = 0;
+    return;
   }
 
-  // update (backwards, because we splice)
-  for (let i = creatures.length - 1; i >= 0; i--) {
-    let c = creatures[i];
-    c.checkLight(lightX, lightY, lightRadius);
-    c.move();
+  // ---- hand signs change the room ----
+  let sign = confirmedGesture();
+  if (sign !== "none") goTo(sign);
 
-    if (c.isDead()) {
-      creatures.splice(i, 1); // REMOVE: banished by the light
-      score++;
-    } else if (c.reachedYou()) {
-      creatures.splice(i, 1); // REMOVE: she got you
-      lives--;
-      hurtFlash = 200;
-      scareImg = c.img;
-      scareTimer = 22;
-    }
+  let lightOn = eyesOpen && faceFound;
+  let radius = currentRoom.lightRadius;
+
+  // ---- the scene ----
+  currentRoom.display();
+  updateRoom(lightOn, radius); // creatures + key
+
+  // ---- darkness: a hole where your headlamp points, or total black ----
+  if (lightOn) {
+    let flicker = random() < 0.04 ? random(-30, 0) : random(-3, 3);
+    drawDarkness(lookX, lookY, radius + flicker);
+  } else {
+    noStroke();
+    fill(0, 250);
+    rect(0, 0, width, height);
   }
 
-  // far ones first, near ones on top
-  creatures.sort((a, b) => a.p - b.p);
-  for (let c of creatures) {
-    c.display();
-  }
-
-  // darkness with a hole where the light is
-  let flicker = random() < 0.05 ? random(-40, 0) : random(-4, 4);
-  drawDarkness(lightX, lightY, lightRadius + flicker);
-
-  for (let c of creatures) {
-    c.displayGlimpse();
-  }
+  // ---- things you can see in the dark ----
+  for (let c of creatures) c.displayGlimpse();
+  if (currentRoom.key) currentRoom.key.displayGlint();
+  updateDust(lightOn, radius);
 
   if (hurtFlash > 0) {
     noStroke();
@@ -153,28 +134,391 @@ function playGame() {
     rect(0, 0, width, height);
     hurtFlash -= 8;
   }
-
   drawJumpScare();
   drawGrain();
   drawHUD();
+}
 
-  // win / lose (let the jump scare finish first)
-  if (lives <= 0 && scareTimer <= 0) {
-    gameState = "gameOver";
-  } else if (timeLeft <= 0) {
-    gameState = "win";
+function updateRoom(lightOn, radius) {
+  let room = currentRoom;
+  let key = room.key;
+
+  key.update(lightOn, lookX, lookY, radius);
+  key.display();
+
+  // creatures get faster with every room you escape
+  let waitFrames = max(22, 55 - escapedCount() * 7);
+
+  for (let i = creatures.length - 1; i >= 0; i--) {
+    let c = creatures[i];
+    c.checkLight(lightOn, lookX, lookY, radius);
+    c.update(justBlinked, waitFrames);
+
+    if (c.caughtYou()) {
+      creatures.splice(i, 1); // REMOVE: she got you…
+      creatures.push(new Creature(room)); // ADD: …and another one starts over
+      penalty += 15; // costs you 15 seconds
+      hurtFlash = 200;
+      scareImg = c.img;
+      scareTimer = 22;
+    }
+  }
+
+  // found the key → escaped!
+  if (key.isFound() && !room.escaped) {
+    room.escaped = true;
+    creatures.splice(0, creatures.length); // REMOVE them all
+    if (allEscaped()) {
+      gameState = "win"; // that was the last one
+    }
+  }
+
+  for (let c of creatures) c.display();
+}
+
+function updateDust(lightOn, radius) {
+  if (lightOn && random() < 0.6) {
+    dust.push(
+      new Dust(
+        lookX + random(-radius, radius) * 0.5,
+        lookY + random(-radius, radius) * 0.5,
+      ),
+    );
+  }
+  for (let i = dust.length - 1; i >= 0; i--) {
+    dust[i].update();
+    dust[i].display();
+    if (dust[i].isGone()) dust.splice(i, 1);
   }
 }
+
+//////////////////// CHANGING ROOMS //////////////////////
+
+function goTo(sign) {
+  let room = roomForSign(sign);
+  if (!room || room === currentRoom) return;
+
+  currentRoom = room;
+  gameState = room.isHallway ? "hallway" : "room";
+  creatures = [];
+  if (!room.escaped) {
+    creatures.push(new Creature(room)); // ADD the creature that lives here
+  }
+  roomTitleTimer = 90;
+}
+
+function allEscaped() {
+  return escapedCount() === hauntedRooms().length;
+}
+
+function escapedCount() {
+  let n = 0;
+  for (let r of hauntedRooms()) if (r.escaped) n++;
+  return n;
+}
+
+//////////////////// SCREENS //////////////////////
+
+function drawStart() {
+  // the camera "catches" your face
+  push();
+  tint(255, 60);
+  image(video, 0, 0, width, height);
+  pop();
+  if (faces.length > 0) {
+    noStroke();
+    fill(200, 0, 0, 160);
+    let k = faces[0].keypoints;
+    for (let i = 0; i < k.length; i += 3) circle(k[i].x, k[i].y, 2);
+  }
+  drawGrain();
+
+  noStroke();
+  textAlign(CENTER, CENTER);
+  fill(200, 0, 0);
+  textSize(46);
+  text("THE HOUSE", width / 2, 80);
+  fill(200);
+  textSize(15);
+  text(
+    "You wear a light on your forehead. Turn your head to look.",
+    width / 2,
+    140,
+  );
+  text("Close your eyes and the light goes out.", width / 2, 162);
+  text("They only move when you're not looking at them.", width / 2, 184);
+  text("Find the key in every room. Stare at it to take it.", width / 2, 206);
+  text("Escape all 6 rooms, the hallway too, in 2:00.", width / 2, 228);
+
+  textSize(13);
+  fill(170);
+  text(
+    "RIGHT open: Bedroom   RIGHT fist: Kitchen   LEFT open: Bathroom",
+    width / 2,
+    290,
+  );
+  text(
+    "LEFT fist: Living Room   BOTH open: Basement   BOTH fists: Hallway",
+    width / 2,
+    310,
+  );
+
+  fill(255);
+  textSize(16);
+  if (!faceFound) {
+    text("Look at the camera…", width / 2, 380);
+  } else {
+    text(
+      "Look straight ahead. Close your eyes for 2 seconds to enter.",
+      width / 2,
+      380,
+    );
+    if (!eyesOpen) closedEyesFrames++;
+    else closedEyesFrames = 0;
+    noFill();
+    stroke(200, 0, 0);
+    strokeWeight(4);
+    arc(
+      width / 2,
+      425,
+      40,
+      40,
+      -HALF_PI,
+      -HALF_PI + TWO_PI * min(1, closedEyesFrames / 120),
+    );
+    if (closedEyesFrames >= 120) startGame();
+  }
+  noStroke();
+  fill(120);
+  textSize(11);
+  text(
+    "(testing without a camera? press M for mouse mode, then click)",
+    width / 2,
+    465,
+  );
+}
+
+function startGame() {
+  for (let r of rooms) {
+    r.escaped = false;
+    if (r.key) r.key.charge = 0;
+  }
+  currentRoom = hallway;
+  creatures = [new Creature(hallway)]; // the hallway's creature is waiting for you
+  dust = [];
+  penalty = 0;
+  startTime = millis();
+  closedEyesFrames = 0;
+  scareTimer = 0;
+  hurtFlash = 0;
+  roomTitleTimer = 90;
+  gameState = "hallway";
+}
+
+// time ran out: the creature comes for you
+function drawCaught() {
+  caughtTimer++;
+  let img =
+    scareImg ||
+    ghostImages[random(ghostFiles)] ||
+    random(Object.values(ghostImages));
+  scareImg = img;
+  if (img) {
+    push();
+    translate(width / 2 + random(-20, 20), height / 2 + random(-20, 20));
+    imageMode(CENTER);
+    let h = height * lerp(0.6, 1.6, min(1, caughtTimer / 40));
+    image(img, 0, 0, (h * img.width) / img.height, h);
+    pop();
+  }
+  noStroke();
+  fill(150, 0, 0, random(60, 140));
+  rect(0, 0, width, height);
+  drawGrain();
+  if (caughtTimer > 70) gameState = "ghost";
+}
+
+// …and you become one of them
+function drawGhostEnding() {
+  push();
+  tint(190, 205, 255);
+  image(video, 0, 0, width, height);
+  pop();
+  filter(GRAY);
+
+  // hollow black eyes and mouth on YOUR face
+  if (faces.length > 0) {
+    let k = faces[0].keypoints;
+    noStroke();
+    fill(0);
+    for (let eye of [L_EYE, R_EYE]) {
+      let cx = (k[eye[2]].x + k[eye[3]].x) / 2;
+      let cy = (k[eye[0]].y + k[eye[1]].y) / 2;
+      let w = dist(k[eye[2]].x, k[eye[2]].y, k[eye[3]].x, k[eye[3]].y);
+      ellipse(cx, cy, w * 1.5, w * 1.2);
+      rect(cx - 2, cy, 4, w * 1.4 + 10 * sin(frameCount * 0.05) + 10); // dripping
+    }
+    let m1 = k[13],
+      m2 = k[14];
+    ellipse((m1.x + m2.x) / 2, m2.y + 8, 30, 45);
+  }
+
+  noStroke();
+  fill(220, 230, 255, 50);
+  rect(0, 0, width, height);
+  if (random() < 0.08) {
+    fill(0, 150);
+    rect(0, random(height), width, random(5, 30)); // tracking glitch
+  }
+  drawGrain();
+
+  textAlign(CENTER, CENTER);
+  fill(200, 0, 0);
+  textSize(36);
+  text("YOU ARE ONE OF THEM NOW", width / 2, 60);
+  fill(230);
+  textSize(15);
+  text(
+    "Rooms escaped: " + escapedCount() + " / " + hauntedRooms().length,
+    width / 2,
+    420,
+  );
+  text("[ click or press R to try again ]", width / 2, 445);
+}
+
+function drawWin() {
+  push();
+  tint(255, 120);
+  image(video, 0, 0, width, height);
+  pop();
+  noStroke();
+  fill(255, 240, 200, 40);
+  rect(0, 0, width, height);
+  drawGrain();
+  textAlign(CENTER, CENTER);
+  fill(255);
+  textSize(40);
+  text("YOU ESCAPED THE HOUSE", width / 2, height / 2 - 30);
+  textSize(18);
+  text("with " + formatTime(timeLeft) + " left", width / 2, height / 2 + 15);
+  textSize(15);
+  text("[ click or press R to play again ]", width / 2, height / 2 + 60);
+}
+
+//////////////////// HUD //////////////////////
+
+function formatTime(t) {
+  t = max(0, ceil(t));
+  return floor(t / 60) + ":" + nf(t % 60, 2);
+}
+
+function drawHUD() {
+  noStroke();
+  textAlign(LEFT, TOP);
+  textSize(26);
+  fill(
+    timeLeft < 20 && frameCount % 30 < 15
+      ? color(255, 40, 40)
+      : color(200, 0, 0),
+  );
+  text(formatTime(timeLeft), 15, 12);
+
+  // escaped rooms
+  textSize(12);
+  let haunted = hauntedRooms();
+  for (let i = 0; i < haunted.length; i++) {
+    let r = haunted[i];
+    fill(r.escaped ? color(230, 200, 120) : color(110));
+    text((r.escaped ? "✓ " : "· ") + r.name, 15, 50 + i * 16);
+  }
+
+  // where am I + what to do
+  textAlign(RIGHT, TOP);
+  textSize(16);
+  fill(200);
+  text(currentRoom.name.toUpperCase(), width - 15, 14);
+  textSize(12);
+  fill(150);
+  text(eyesOpen ? "eyes: open" : "eyes: CLOSED", width - 15, 36);
+  if (!faceFound) {
+    fill(255, 80, 80);
+    text("can't see your face!", width - 15, 52);
+  }
+
+  // big room title when you walk in
+  if (roomTitleTimer > 0) {
+    textAlign(CENTER, CENTER);
+    fill(255, map(roomTitleTimer, 0, 90, 0, 230));
+    textSize(34);
+    text(currentRoom.name.toUpperCase(), width / 2, height / 2 - 40);
+    textSize(14);
+    if (!currentRoom.escaped) text("find the key", width / 2, height / 2);
+    roomTitleTimer--;
+  }
+
+  textAlign(CENTER, BOTTOM);
+  textSize(13);
+  if (currentRoom.escaped) {
+    fill(230, 200, 120);
+    text(
+      "You escaped this room. Make a hand sign to leave.",
+      width / 2,
+      height - 12,
+    );
+  } else if (currentRoom.isHallway) {
+    fill(170);
+    textSize(11);
+    text(
+      "R open: Bedroom · R fist: Kitchen · L open: Bathroom",
+      width / 2 - 55,
+      height - 28,
+    );
+    text(
+      "L fist: Living Room · both open: Basement · both fists: here",
+      width / 2 - 55,
+      height - 10,
+    );
+  }
+
+  // hand sign being held
+  if (gestureProgress() > 0) {
+    let target = (roomForSign(gestureNow) || {}).name;
+    if (target) {
+      noFill();
+      stroke(255);
+      strokeWeight(3);
+      arc(
+        width / 2,
+        60,
+        34,
+        34,
+        -HALF_PI,
+        -HALF_PI + TWO_PI * gestureProgress(),
+      );
+      noStroke();
+      fill(255);
+      textAlign(CENTER, TOP);
+      textSize(12);
+      text("→ " + target, width / 2, 82);
+    }
+  }
+
+  // small camera preview so you can see your hands
+  push();
+  tint(255, 110);
+  image(video, width - 112, height - 90, 104, 78);
+  pop();
+}
+
+//////////////////// EFFECTS //////////////////////
 
 function drawDarkness(x, y, r) {
   let ctx = drawingContext;
   let g = ctx.createRadialGradient(x, y, r * 0.2, x, y, r);
   g.addColorStop(0, "rgba(0,0,0,0)");
-  g.addColorStop(1, "rgba(0,0,0,0.95)");
+  g.addColorStop(1, "rgba(0,0,0,0.96)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, width, height);
-
-  // a faint warm glow inside the beam
   let glow = ctx.createRadialGradient(x, y, 0, x, y, r * 0.8);
   glow.addColorStop(0, "rgba(255,235,190,0.15)");
   glow.addColorStop(1, "rgba(255,235,190,0)");
@@ -182,25 +526,22 @@ function drawDarkness(x, y, r) {
   ctx.fillRect(0, 0, width, height);
 }
 
-function drawHUD() {
-  noStroke();
-  fill(200, 0, 0);
-  textSize(18);
-  textAlign(LEFT, TOP);
-  text("LIVES " + "♥".repeat(max(0, lives)), 15, 15);
-  text("BANISHED " + score, 15, 40);
-  textAlign(RIGHT, TOP);
-  text(timeLeft + "s", width - 15, 15);
-  text("LEVEL " + level, width - 15, 40);
+function drawJumpScare() {
+  if (scareTimer <= 0) return;
+  if (scareImg) {
+    push();
+    translate(width / 2 + random(-15, 15), height / 2 + random(-15, 15));
+    imageMode(CENTER);
+    let h = height * 1.35;
+    image(scareImg, 0, 0, (h * scareImg.width) / scareImg.height, h);
+    pop();
+  }
+  scareTimer--;
 }
 
-// ---------- horror effects ----------
-
-// turn a photo into a grey, high-contrast face that fades into the dark
 function prepareGhost(src) {
   let img = src.get();
   if (img.height > 320) img.resize(0, 320);
-
   img.loadPixels();
   for (let i = 0; i < img.pixels.length; i += 4) {
     let v =
@@ -211,7 +552,6 @@ function prepareGhost(src) {
     img.pixels[i + 2] = v;
   }
   img.updatePixels();
-
   let m = createGraphics(img.width, img.height);
   m.pixelDensity(1);
   let ctx = m.drawingContext;
@@ -228,6 +568,23 @@ function prepareGhost(src) {
   return img;
 }
 
+function makeGrain() {
+  for (let i = 0; i < 4; i++) {
+    let g = createGraphics(width / 2, height / 2);
+    g.pixelDensity(1);
+    g.loadPixels();
+    for (let p = 0; p < g.pixels.length; p += 4) {
+      let v = random(255);
+      g.pixels[p] = v;
+      g.pixels[p + 1] = v;
+      g.pixels[p + 2] = v;
+      g.pixels[p + 3] = random(45);
+    }
+    g.updatePixels();
+    grainFrames.push(g);
+  }
+}
+
 function drawGrain() {
   push();
   tint(255, 160);
@@ -235,90 +592,23 @@ function drawGrain() {
   pop();
 }
 
-function drawJumpScare() {
-  if (scareTimer <= 0) return;
-  if (scareImg) {
-    push();
-    translate(width / 2 + random(-15, 15), height / 2 + random(-15, 15));
-    imageMode(CENTER);
-    let h = height * 1.35;
-    let w = (h * scareImg.width) / scareImg.height;
-    tint(255, 245);
-    image(scareImg, 0, 0, w, h);
-    pop();
-  }
-  scareTimer--;
-}
-
-// ---------- SCREENS ----------
-function drawStartScreen() {
-  displayRoom();
-  drawDarkness(mouseX, mouseY, 110);
-  drawGrain();
-
-  noStroke();
-  textAlign(CENTER, CENTER);
-  fill(200, 0, 0);
-  textSize(56);
-  text("FLASHLIGHT", width / 2, height / 2 - 70);
-  fill(190);
-  textSize(16);
-  text("Something lives behind these doors.", width / 2, height / 2 - 10);
-  text("They only move when you're not looking.", width / 2, height / 2 + 15);
-  text("Hold your light on them to banish them.", width / 2, height / 2 + 40);
-  text("Survive " + gameLength + " seconds.", width / 2, height / 2 + 65);
-  fill(255);
-  text("[ click to begin ]", width / 2, height / 2 + 115);
-}
-
-function drawEndScreen(won) {
-  if (!won && scareImg) {
-    push();
-    imageMode(CENTER);
-    tint(255, 45 + random(10));
-    let h = height;
-    image(
-      scareImg,
-      width / 2,
-      height / 2,
-      (h * scareImg.width) / scareImg.height,
-      h,
-    );
-    pop();
-  }
-  drawGrain();
-  noStroke();
-  textAlign(CENTER, CENTER);
-  if (won) {
-    fill(230);
-    textSize(44);
-    text("DAWN BREAKS", width / 2, height / 2 - 40);
-  } else {
-    fill(200, 0, 0);
-    textSize(44);
-    text("THEY GOT YOU", width / 2, height / 2 - 40);
-  }
-  fill(180);
-  textSize(18);
-  text("Banished: " + score + "   Level: " + level, width / 2, height / 2 + 10);
-  text("[ click to play again ]", width / 2, height / 2 + 60);
-}
+//////////////////// MOUSE + KEYS //////////////////////
 
 function mousePressed() {
-  if (gameState !== "playing") {
-    resetGame();
-    gameState = "playing";
-  }
+  if (gameState === "start" && MOUSE_MODE) startGame();
+  else if (gameState === "ghost" || gameState === "win") gameState = "start";
 }
 
-function resetGame() {
-  creatures = [];
-  lives = 3;
-  score = 0;
-  level = 1;
-  timeLeft = gameLength;
-  startTime = millis();
-  lastSpawn = millis() - spawnInterval + 600; // first one comes quickly
-  hurtFlash = 0;
-  scareTimer = 0;
+function keyPressed() {
+  if (key === "m" || key === "M") MOUSE_MODE = !MOUSE_MODE;
+  if (key === "s" || key === "S") SWAP_HANDS = !SWAP_HANDS;
+  if (
+    (key === "r" || key === "R") &&
+    (gameState === "ghost" || gameState === "win")
+  )
+    gameState = "start";
+  if (gameState === "hallway" || gameState === "room") {
+    let sign = keyboardRoom();
+    if (sign !== "none") goTo(sign);
+  }
 }
