@@ -4,8 +4,8 @@
 // Things only move when you are not looking at them.
 // Escape all six rooms (the hallway too) in 2 minutes.
 //
-// Files:  house.js    the Room class + all six rooms (hallway + five)
-//         creature.js Creature, Key, Dust classes
+// Files:  rooms.js    the Room class + all six rooms (hallway + five)
+//         creature.js Creature + Dust classes
 //         body.js     faceMesh + handPose
 //         sketch.js   this file: game states
 
@@ -29,28 +29,35 @@ let scareImg = null;
 let scareTimer = 0;
 let caughtTimer = 0;
 
-// ---------- horror images ----------
-// One photo per room. Missing ones are replaced by another photo,
-// or by a drawn face if there are none at all.
-let ghostFiles = [
-  "ghost1.png",
-  "ghost2.png",
-  "ghost3.png",
-  "ghost4.png",
-  "ghost5.png",
-  "ghost6.png",
+// ---------- creature pictures ----------
+// Every creature has 8 pictures, one for each step it takes toward you.
+// They live in the "creatures" folder, named like: creatures/bedroom_1.png … creatures/bedroom_8.png
+// If a room's pictures are missing, its creature is a simple drawn face.
+let creatureNames = [
+  "hallway",
+  "bedroom",
+  "kitchen",
+  "bathroom",
+  "livingroom",
+  "basement",
 ];
-let ghostRaw = {};
-let ghostImages = {};
+const FRAMES = 8;
+let rawFrames = {}; // the pictures as loaded
+let creatureFrames = {}; // the same pictures made grey and creepy
 let grainFrames = [];
 
 function preload() {
-  for (let f of ghostFiles) {
-    loadImage(
-      f,
-      (img) => (ghostRaw[f] = img),
-      () => console.log("No " + f + " (that's ok)"),
-    );
+  for (let name of creatureNames) {
+    rawFrames[name] = [];
+    for (let i = 0; i < FRAMES; i++) {
+      let file = "creatures/" + name + "_" + (i + 1) + ".png";
+      // store each picture in its own place (i), so the order stays right
+      loadImage(
+        file,
+        (img) => (rawFrames[name][i] = img),
+        () => console.log("No " + file),
+      );
+    }
   }
   preloadBody();
 }
@@ -62,13 +69,17 @@ function setup() {
   video.hide();
   textFont("monospace");
 
-  setupRooms(); // all six rooms, from house.js
+  setupRooms(); // all six rooms, from rooms.js
   hallway = roomForSign("bothClosed");
   currentRoom = hallway;
   setupBody(); // start faceMesh + handPose
 
-  for (let f in ghostRaw) {
-    ghostImages[f] = prepareGhost(ghostRaw[f]);
+  // make every picture grey and creepy (skip any that didn't load)
+  for (let name of creatureNames) {
+    creatureFrames[name] = [];
+    for (let img of rawFrames[name]) {
+      if (img) creatureFrames[name].push(prepareGhost(img));
+    }
   }
   makeGrain();
 }
@@ -111,7 +122,7 @@ function playFrame() {
 
   // ---- the scene ----
   currentRoom.display();
-  updateRoom(lightOn, radius); // creatures + key
+  updateRoom(lightOn, radius); // the creature
 
   // ---- darkness: a hole where your headlamp points, or total black ----
   if (lightOn) {
@@ -125,7 +136,6 @@ function playFrame() {
 
   // ---- things you can see in the dark ----
   for (let c of creatures) c.displayGlimpse();
-  if (currentRoom.key) currentRoom.key.displayGlint();
   updateDust(lightOn, radius);
 
   if (hurtFlash > 0) {
@@ -141,10 +151,6 @@ function playFrame() {
 
 function updateRoom(lightOn, radius) {
   let room = currentRoom;
-  let key = room.key;
-
-  key.update(lightOn, lookX, lookY, radius);
-  key.display();
 
   // creatures get faster with every room you escape
   let waitFrames = max(22, 55 - escapedCount() * 7);
@@ -159,17 +165,8 @@ function updateRoom(lightOn, radius) {
       creatures.push(new Creature(room)); // ADD: …and another one starts over
       penalty += 15; // costs you 15 seconds
       hurtFlash = 200;
-      scareImg = c.img;
+      scareImg = c.currentImage(); // the last picture: right in your face
       scareTimer = 22;
-    }
-  }
-
-  // found the key → escaped!
-  if (key.isFound() && !room.escaped) {
-    room.escaped = true;
-    creatures.splice(0, creatures.length); // REMOVE them all
-    if (allEscaped()) {
-      gameState = "win"; // that was the last one
     }
   }
 
@@ -198,6 +195,19 @@ function goTo(sign) {
   let room = roomForSign(sign);
   if (!room || room === currentRoom) return;
 
+  // ESCAPE: you leave while your light is on the creature
+  for (let c of creatures) {
+    if (c.lit) {
+      currentRoom.escaped = true;
+    }
+  }
+
+  // that was the last room → you win
+  if (allEscaped()) {
+    gameState = "win";
+    return;
+  }
+
   currentRoom = room;
   gameState = room.isHallway ? "hallway" : "room";
   creatures = [];
@@ -208,12 +218,12 @@ function goTo(sign) {
 }
 
 function allEscaped() {
-  return escapedCount() === hauntedRooms().length;
+  return escapedCount() === rooms.length;
 }
 
 function escapedCount() {
   let n = 0;
-  for (let r of hauntedRooms()) if (r.escaped) n++;
+  for (let r of rooms) if (r.escaped) n++;
   return n;
 }
 
@@ -247,7 +257,11 @@ function drawStart() {
   );
   text("Close your eyes and the light goes out.", width / 2, 162);
   text("They only move when you're not looking at them.", width / 2, 184);
-  text("Find the key in every room. Stare at it to take it.", width / 2, 206);
+  text(
+    "Find it. Keep staring at it and make a hand sign to escape.",
+    width / 2,
+    206,
+  );
   text("Escape all 6 rooms, the hallway too, in 2:00.", width / 2, 228);
 
   textSize(13);
@@ -301,7 +315,6 @@ function drawStart() {
 function startGame() {
   for (let r of rooms) {
     r.escaped = false;
-    if (r.key) r.key.charge = 0;
   }
   currentRoom = hallway;
   creatures = [new Creature(hallway)]; // the hallway's creature is waiting for you
@@ -318,10 +331,7 @@ function startGame() {
 // time ran out: the creature comes for you
 function drawCaught() {
   caughtTimer++;
-  let img =
-    scareImg ||
-    ghostImages[random(ghostFiles)] ||
-    random(Object.values(ghostImages));
+  let img = scareImg || anyCreaturePicture();
   scareImg = img;
   if (img) {
     push();
@@ -379,7 +389,7 @@ function drawGhostEnding() {
   fill(230);
   textSize(15);
   text(
-    "Rooms escaped: " + escapedCount() + " / " + hauntedRooms().length,
+    "Rooms escaped: " + escapedCount() + " / " + rooms.length,
     width / 2,
     420,
   );
@@ -425,9 +435,8 @@ function drawHUD() {
 
   // escaped rooms
   textSize(12);
-  let haunted = hauntedRooms();
-  for (let i = 0; i < haunted.length; i++) {
-    let r = haunted[i];
+  for (let i = 0; i < rooms.length; i++) {
+    let r = rooms[i];
     fill(r.escaped ? color(230, 200, 120) : color(110));
     text((r.escaped ? "✓ " : "· ") + r.name, 15, 50 + i * 16);
   }
@@ -452,7 +461,7 @@ function drawHUD() {
     textSize(34);
     text(currentRoom.name.toUpperCase(), width / 2, height / 2 - 40);
     textSize(14);
-    if (!currentRoom.escaped) text("find the key", width / 2, height / 2);
+    if (!currentRoom.escaped) text("find it", width / 2, height / 2);
     roomTitleTimer--;
   }
 
@@ -503,11 +512,36 @@ function drawHUD() {
     }
   }
 
+  // you're looking at it → tell the player they can escape now
+  for (let c of creatures) {
+    if (c.lit) {
+      noStroke();
+      fill(255, 220, 120);
+      textAlign(CENTER, TOP);
+      textSize(14);
+      text(
+        "You see it! Keep staring and make a hand sign to escape.",
+        width / 2,
+        110,
+      );
+      break;
+    }
+  }
+
   // small camera preview so you can see your hands
   push();
   tint(255, 110);
   image(video, width - 112, height - 90, 104, 78);
   pop();
+}
+
+// the last picture of any creature that has pictures (for the final scare)
+function anyCreaturePicture() {
+  for (let name of creatureNames) {
+    let f = creatureFrames[name];
+    if (f.length > 0) return f[f.length - 1];
+  }
+  return null;
 }
 
 //////////////////// EFFECTS //////////////////////

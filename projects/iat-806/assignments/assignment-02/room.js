@@ -18,10 +18,8 @@ function setupRoom() {
     new Door("left", 0.18, 0.36, 0.72, true),
     new Door("left", 0.5, 0.63, 0.72, false),
     new Door("left", 0.74, 0.84, 0.72, true),
-
     new Door("right", 0.3, 0.46, 0.72, false),
     new Door("right", 0.62, 0.74, 0.72, true),
-
     new Door("back", 0, 0, 0.75, false),
   ];
 
