@@ -1,9 +1,23 @@
 //////////////////// THE HAUNTED HOUSE //////////////////////
-// A headlamp on your forehead. Turn your head to look around.
-// Close your eyes = the light goes out.
-// Things only move when you are not looking at them.
-// Escape all six rooms (the hallway too) in 2 minutes.
-//
+// This is the game senario:
+// Game starts.
+// The camera catches the face of the player, and the light comes to the page (room) like there is a flashlight is on her forehead. So, the light should change the direction when the eyes of the player change direction. (It’s like that the player face is changing direction and moving toward spaces)
+// Eyes open, the light is on // eyes closed the light is off// when the eyes move off the creature which the play faces/sees the creature gets one frame closer.
+// So, when seeing a creature, the player should stare at it so that the creature doesn’t move.
+// Then we have the hand pose, which helps the player to change the rooms.
+// Right hand (open) >>>> Bedroom
+// Right hand (close) >>>> Kitchen
+// Left hand (open) >>>> Bathroom
+// Left hand (close) >>>> Living room
+// Two hands open >>>> Basement
+// Two hands close >>>> Back to the first frame
+// Bedroom: there is a creature under the bed
+// Kitchen: there is a creature on the empty corner of the kitchen
+// Bathroom: the player stands in front of the mirror, and the mirror shows the player’s face and the creature behind her.
+// Living room: the creature is on top of the ceiling
+// The basement: the play goes a few stairs down and see a creature crawling toward her from the basement.
+// The player will survive when she escapes all these rooms and come back to the first frame if she does it in 2 mins. Otherwise in the last scene the creature catches her and she becomes a ghost.
+
 // Files:  rooms.js    the Room class + all six rooms (hallway + five)
 //         creature.js Creature + Dust classes
 //         body.js     faceMesh + handPose
@@ -12,12 +26,13 @@
 let gameState = "start"; // "start", "hallway", "room", "caught", "ghost", "win"
 
 let video;
-let currentRoom; // the Room object you are in (the hallway is a room too)
-let hallway; // the first frame
+let currentRoom; // the room the player is in at the moment(the hallway is a room too)
+let hallway; // the first frame and starting point of the game
 let creatures = [];
 let dust = [];
 
-const TOTAL_TIME = 120; // seconds
+/// this is the timer and the game loop
+let TOTAL_TIME = 120; // seconds
 let startTime = 0;
 let penalty = 0; // seconds lost when a creature gets you
 let timeLeft = TOTAL_TIME;
@@ -102,7 +117,6 @@ function draw() {
 }
 
 //////////////////// PLAYING //////////////////////
-
 function playFrame() {
   // ---- the clock ----
   timeLeft = TOTAL_TIME - (millis() - startTime) / 1000 - penalty;
