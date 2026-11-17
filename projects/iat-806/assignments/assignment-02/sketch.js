@@ -19,7 +19,7 @@
 // The player will survive when she escapes all these rooms and come back to the first frame if she does it in 2 mins. Otherwise in the last scene the creature catches her and she becomes a ghost.
 
 // Files:  rooms.js    the Room class + all six rooms (hallway + five)
-//         creature.js Creature + Dust classes
+//         creature.js Creature + Dust classes (+ measureFrame)
 //         body.js     faceMesh + handPose
 //         sketch.js   this file: game states
 
@@ -45,9 +45,9 @@ let scareTimer = 0;
 let caughtTimer = 0;
 
 // ---------- creature pictures ----------
-// Every creature has 8 pictures, one for each step it takes toward you.
-// They live in the "creatures" folder, named like: creatures/bedroom_1.png … creatures/bedroom_8.png
-// If a room's pictures are missing, its creature is a simple drawn face.
+// Every creature has 8 transparent pictures, one for each step it takes toward you.
+// Each room's pictures live in their own folder, numbered 0–7,
+// e.g. bedroom-creature/underbed_0.png … bedroom-creature/underbed_7.png
 const CREATURE_FILES = {
   hallway: "hallway-creature/ghost_",
   bedroom: "bedroom-creature/underbed_",
@@ -56,15 +56,14 @@ const CREATURE_FILES = {
   livingroom: "livingroom-creature/living_room_creature_",
   basement: "basement-creature/creature_",
 };
-// inside the loop:
-let file = CREATURE_FILES[name] + i + ".png";
+let creatureNames = Object.keys(CREATURE_FILES); // "hallway", "bedroom", …
 const FRAMES = 8;
 let rawFrames = {}; // the pictures as loaded
 let creatureFrames = {}; // the same pictures made grey and creepy
 let grainFrames = [];
 
 function preload() {
-  for (let name of Object.keys(CREATURE_FILES)) {
+  for (let name of creatureNames) {
     rawFrames[name] = [];
     for (let i = 0; i < FRAMES; i++) {
       let file = CREATURE_FILES[name] + i + ".png";
@@ -92,7 +91,7 @@ function setup() {
   setupBody(); // start faceMesh + handPose
 
   // make every picture grey and creepy (skip any that didn't load)
-  for (let name of Object.keys(CREATURE_FILES)) {
+  for (let name of creatureNames) {
     creatureFrames[name] = [];
     for (let img of rawFrames[name]) {
       if (img) creatureFrames[name].push(prepareGhost(img));
@@ -218,8 +217,8 @@ function goTo(sign) {
     }
   }
 
-  // that was the last room → you win
-  if (allEscaped()) {
+  // WIN: all five rooms escaped and you make it back to the hallway in time
+  if (room.isHallway && allEscaped()) {
     gameState = "win";
     return;
   }
@@ -233,13 +232,18 @@ function goTo(sign) {
   roomTitleTimer = 90;
 }
 
+// the five rooms you have to escape (the hallway is where you start and finish)
+function roomsToEscape() {
+  return rooms.filter((r) => !r.isHallway);
+}
+
 function allEscaped() {
-  return escapedCount() === rooms.length;
+  return escapedCount() === roomsToEscape().length;
 }
 
 function escapedCount() {
   let n = 0;
-  for (let r of rooms) if (r.escaped) n++;
+  for (let r of roomsToEscape()) if (r.escaped) n++;
   return n;
 }
 
@@ -278,7 +282,11 @@ function drawStart() {
     width / 2,
     206,
   );
-  text("Escape all 6 rooms, the hallway too, in 2:00.", width / 2, 228);
+  text(
+    "Escape all 5 rooms and get back to the hallway in 2:00.",
+    width / 2,
+    228,
+  );
 
   textSize(13);
   fill(170);
@@ -405,7 +413,7 @@ function drawGhostEnding() {
   fill(230);
   textSize(15);
   text(
-    "Rooms escaped: " + escapedCount() + " / " + rooms.length,
+    "Rooms escaped: " + escapedCount() + " / " + roomsToEscape().length,
     width / 2,
     420,
   );
@@ -451,8 +459,9 @@ function drawHUD() {
 
   // escaped rooms
   textSize(12);
-  for (let i = 0; i < rooms.length; i++) {
-    let r = rooms[i];
+  let list = roomsToEscape();
+  for (let i = 0; i < list.length; i++) {
+    let r = list[i];
     fill(r.escaped ? color(230, 200, 120) : color(110));
     text((r.escaped ? "✓ " : "· ") + r.name, 15, 50 + i * 16);
   }
@@ -483,7 +492,14 @@ function drawHUD() {
 
   textAlign(CENTER, BOTTOM);
   textSize(13);
-  if (currentRoom.escaped) {
+  if (allEscaped() && !currentRoom.isHallway) {
+    fill(255, 220, 120);
+    text(
+      "All rooms escaped! BOTH FISTS to get back to the hallway.",
+      width / 2,
+      height - 12,
+    );
+  } else if (currentRoom.escaped) {
     fill(230, 200, 120);
     text(
       "You escaped this room. Make a hand sign to leave.",
@@ -538,7 +554,7 @@ function drawHUD() {
       text(
         "You see it! Keep staring and make a hand sign to escape.",
         width / 2,
-        110,
+        140,
       );
       break;
     }
@@ -578,6 +594,7 @@ function drawDarkness(x, y, r) {
 
 function drawJumpScare() {
   if (scareTimer <= 0) return;
+  // a quick flash of the last picture, shaking
   if (scareImg) {
     push();
     translate(width / 2 + random(-15, 15), height / 2 + random(-15, 15));
@@ -589,9 +606,10 @@ function drawJumpScare() {
   scareTimer--;
 }
 
+// make a picture grey and high-contrast (it keeps its transparent background)
 function prepareGhost(src) {
   let img = src.get();
-  if (img.height > 320) img.resize(0, 320);
+  if (img.height > 480) img.resize(0, 480);
   img.loadPixels();
   for (let i = 0; i < img.pixels.length; i += 4) {
     let v =
@@ -602,19 +620,6 @@ function prepareGhost(src) {
     img.pixels[i + 2] = v;
   }
   img.updatePixels();
-  let m = createGraphics(img.width, img.height);
-  m.pixelDensity(1);
-  let ctx = m.drawingContext;
-  ctx.translate(img.width / 2, img.height / 2);
-  ctx.scale(1, img.height / img.width);
-  let r = img.width / 2;
-  let g = ctx.createRadialGradient(0, 0, r * 0.45, 0, 0, r);
-  g.addColorStop(0, "rgba(255,255,255,1)");
-  g.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = g;
-  ctx.fillRect(-r, -r, r * 2, r * 2);
-  img.mask(m.get());
-  m.remove();
   return img;
 }
 

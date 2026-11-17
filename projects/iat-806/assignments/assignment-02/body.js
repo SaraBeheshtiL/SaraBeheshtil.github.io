@@ -19,11 +19,25 @@ let lookY = 240;
 let eyesOpen = true;
 let justBlinked = false; // true for ONE frame when the eyes close
 let faceFound = false;
+let headX = 320; // where your head is in the (mirrored) camera picture
+let headY = 240; //   → handy for the bathroom mirror
 
 // calibration: we learn your "looking straight" pose and your open-eye size
 let neutralYaw = 0;
 let neutralPitch = 0;
 let openEyeSize = 0.3;
+
+// blink filtering: the camera is noisy, so the eyes must stay closed
+// for a few frames before it counts (otherwise one bad frame = a blink)
+let closedFrames = 0;
+let openFrames = 0;
+const BLINK_CONFIRM = 3; // frames the eyes must be closed to count as closed
+const OPEN_CONFIRM = 2; // frames they must be open again to count as open
+
+// if the camera loses your face for a moment, keep the last state
+// instead of turning the light off (and counting it as a blink)
+let lostFrames = 0;
+const LOST_GRACE = 15; // ~0.25 s
 
 // gesture holding
 let gestureNow = "none";
@@ -34,19 +48,19 @@ const GESTURE_HOLD = 45; // ~0.75 s to confirm a sign
 const GAIN_X = 2.6;
 const GAIN_Y = 3.2;
 
+function preloadBody() {
+  if (typeof ml5 === "undefined") return;
+  faceMesh = ml5.faceMesh({ maxFaces: 1, flipped: true });
+  handPose = ml5.handPose({ maxHands: 2, flipped: true });
+}
+
 function setupBody() {
-  if (typeof ml5 === "undefined") {
+  if (typeof ml5 === "undefined" || !faceMesh || !handPose) {
     MOUSE_MODE = true; // ml5 didn't load: play with the mouse
     return;
   }
   faceMesh.detectStart(video, (results) => (faces = results));
   handPose.detectStart(video, (results) => (hands = results));
-}
-
-function preloadBody() {
-  if (typeof ml5 === "undefined") return;
-  faceMesh = ml5.faceMesh({ maxFaces: 1, flipped: true });
-  handPose = ml5.handPose({ maxHands: 2, flipped: true });
 }
 
 //////////////////// FACE //////////////////////
@@ -81,6 +95,15 @@ function headTurn(face) {
   };
 }
 
+// are the eyes open right now? (raw, one frame — may be noisy)
+// Uses two thresholds so it doesn't flicker when the eyes are half-closed:
+// once open, they must drop below 0.5 to count as closed;
+// once closed, they must rise above 0.65 to count as open again.
+function eyesLookOpen(size) {
+  let limit = eyesOpen ? 0.5 : 0.65;
+  return size > openEyeSize * limit;
+}
+
 // call every frame. calibrate = true on the start screen (look straight ahead)
 function updateBody(calibrate) {
   let wasOpen = eyesOpen;
@@ -89,10 +112,14 @@ function updateBody(calibrate) {
     faceFound = true;
     lookX = mouseX;
     lookY = mouseY;
-    eyesOpen = !(keyIsPressed && key === " ");
+    headX = mouseX;
+    headY = mouseY;
+    eyesOpen = !keyIsDown(32); // 32 = SPACE
   } else if (faces.length > 0) {
     faceFound = true;
+    lostFrames = 0;
     let face = faces[0];
+    let k = face.keypoints;
     let turn = headTurn(face);
     let size = (eyeSize(face, L_EYE) + eyeSize(face, R_EYE)) / 2;
 
@@ -108,13 +135,32 @@ function updateBody(calibrate) {
     lookX = lerp(lookX, constrain(tx, 0, width), 0.25); // smooth out camera noise
     lookY = lerp(lookY, constrain(ty, 0, height), 0.25);
 
-    eyesOpen = size > openEyeSize * 0.55;
+    // where the head is in the picture (for the mirror)
+    headX = lerp(headX, k[NOSE].x, 0.3);
+    headY = lerp(headY, k[NOSE].y, 0.3);
+
+    // eyes: only change state after a few frames in a row
+    if (eyesLookOpen(size)) {
+      openFrames++;
+      closedFrames = 0;
+      if (openFrames >= OPEN_CONFIRM) eyesOpen = true;
+    } else {
+      closedFrames++;
+      openFrames = 0;
+      if (closedFrames >= BLINK_CONFIRM) eyesOpen = false;
+    }
   } else {
-    faceFound = false;
-    eyesOpen = false; // no face = no light
+    // no face this frame: wait a moment before giving up
+    lostFrames++;
+    if (lostFrames > LOST_GRACE) {
+      faceFound = false;
+      eyesOpen = false; // no face = no light
+    }
   }
 
-  justBlinked = wasOpen && !eyesOpen;
+  // a blink only counts if the face was really seen closing its eyes,
+  // not when the camera simply lost the face
+  justBlinked = wasOpen && !eyesOpen && faceFound;
 }
 
 //////////////////// HANDS //////////////////////
@@ -143,21 +189,30 @@ function whichHand(hand) {
   return side;
 }
 
+// ignore hands the model is unsure about (stops random signs from shadows)
+function goodHands() {
+  return hands.filter((h) => h.confidence === undefined || h.confidence > 0.7);
+}
+
 // turn what the hands are doing into a sign name
 function readGesture() {
-  if (MOUSE_MODE || hands.length === 0) return "none";
+  if (MOUSE_MODE) return "none";
+  let hs = goodHands();
+  if (hs.length === 0) return "none";
 
-  if (hands.length >= 2) {
-    let a = isOpen(hands[0]);
-    let b = isOpen(hands[1]);
-    if (a && b) return "bothOpen";
-    if (!a && !b) return "bothClosed";
-    return "none";
+  if (hs.length >= 2) {
+    // two different hands (sometimes the model finds the same hand twice)
+    if (whichHand(hs[0]) !== whichHand(hs[1])) {
+      let a = isOpen(hs[0]);
+      let b = isOpen(hs[1]);
+      if (a && b) return "bothOpen";
+      if (!a && !b) return "bothClosed";
+      return "none";
+    }
   }
 
-  let h = hands[0];
-  let side = whichHand(h);
-  return side + (isOpen(h) ? "Open" : "Closed"); // e.g. "RightOpen"
+  let h = hs[0];
+  return whichHand(h) + (isOpen(h) ? "Open" : "Closed"); // e.g. "RightOpen"
 }
 
 // returns a sign only once it has been held long enough
@@ -170,7 +225,7 @@ function confirmedGesture() {
     gestureFrames = 0;
   }
   if (gestureFrames === GESTURE_HOLD) {
-    return g;
+    return g; // fires once; keep holding = nothing more happens
   }
   return "none";
 }
