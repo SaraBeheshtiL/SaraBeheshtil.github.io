@@ -235,8 +235,8 @@ class Room {
     this.isHallway = roomData.isHallway; // the first frame. I'm going to identify if this room is hallway
     ////////// properties which defines the creature associated with each room /////////////////////////////
     this.creatureName = roomData.creatureName; // which pictures to use (see CREATURE_FILES in sketch.js)
-    this.appearance = roomData.appearance; // where the creature is drawn at step 1 {x, y, s}
-    this.end = roomData.end; // where it is drawn at the last step
+    this.appearance = roomData.appearance; // where the creature starts {x, y, s, rot}
+    this.end = roomData.end; // where the creature ends or it got you
 
     ///// this is flashlight effect, the radius of the flashlight effect for that room.
     this.lightRadius = roomData.lightRadius; // how far the headlamp reaches
@@ -257,52 +257,61 @@ class Room {
     }
   }
 
-  // in bathroom I have a mirror which shows my real webcam
+  // in bathroom I have a mirror which shows my real webcam.
+  // The mirror is drawn in 3 steps, back to front:
+  //   1. black glass   2. the creature   3. only my face + neck, on top of her
   drawMirror() {
     let m = this.mirror;
-    push();
-    tint(200, 210, 215); // this applies a bluish tint to the webcam image, making it feel colder and natural
-    image(video, m.x, m.y, m.w, m.h); //the webcam video will appear inside the mirror rectangle.
-    pop();
 
-    if (bodyMask) {
-      // YOUR BODY + FACE: the mask is black everywhere except you
-      push();
-      drawingContext.filter = "blur(3px)"; // soften the cut-out edge
-      if (MIRROR_POINTS) {
-        // the mask comes from the raw camera, so mirror it like the video
-        translate(m.x + m.w, m.y);
-        scale(-1, 1);
-        image(bodyMask, 0, 0, m.w, m.h);
-      } else {
-        image(bodyMask, m.x, m.y, m.w, m.h);
+    // 1. black glass (no room behind me, just darkness)
+    noStroke();
+    fill(0);
+    rect(m.x, m.y, m.w, m.h);
+
+    // 2. the creature (Creature.display() keeps her inside the mirror)
+    for (let c of creatures) c.display();
+
+    // 3. my face + neck from the webcam, cut to the shape of my head (faceMesh).
+    //    Drawn 3 times, from a bigger faint shape to the real one, so the edge
+    //    fades softly into the black instead of a hard cut.
+    if (faces.length > 0) {
+      let ctx = drawingContext;
+      for (let [grow, alpha] of [
+        [1.15, 70],
+        [1.07, 140],
+        [1.0, 255],
+      ]) {
+        ctx.save();
+        this.headShape(m, grow);
+        ctx.clip();
+        this.drawWebcam(m, alpha);
+        ctx.restore();
       }
-      drawingContext.filter = "none";
-      pop();
-    } else {
-      // body model not ready yet: show just the face for now
-      this.blackBackground(m);
     }
+
+    // 4. dust and dirt ON the glass, over everything (me and the creature)
+    if (!this.dustLayer) this.dustLayer = makeMirrorDust(m.w, m.h);
+    image(this.dustLayer, m.x, m.y);
   }
 
-  // The mirror is black except YOUR FACE.
-  // faceMesh gives a ring of points around the face (jaw, cheeks, forehead);
-  // we paint black everywhere outside that ring.
-  blackBackground(m) {
-    let ctx = drawingContext;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(m.x, m.y, m.w, m.h); // only paint inside the mirror
-    ctx.clip();
+  // the webcam picture with the cold tint and the steam (my original mirror)
+  drawWebcam(m, alpha = 255) {
+    push();
+    tint(MIRROR_TINT[0], MIRROR_TINT[1], MIRROR_TINT[2], alpha); // cold, sickly tint
+    image(video, m.x, m.y, m.w, m.h); //the webcam video will appear inside the mirror rectangle.
+    pop();
+    noStroke();
+    // a colour wash on top: makes my skin look grey-green and lifeless
+    fill(MIRROR_WASH[0], MIRROR_WASH[1], MIRROR_WASH[2], MIRROR_WASH[3] * (alpha / 255));
+    rect(m.x, m.y, m.w, m.h);
+    fill(170, 180, 180, 45 * (alpha / 255)); // steam / dirty glass
+    rect(m.x, m.y, m.w, m.h);
+  }
 
-    if (faces.length === 0) {
-      ctx.fillStyle = "black"; // no face: the mirror is just black
-      ctx.fillRect(m.x, m.y, m.w, m.h);
-      ctx.restore();
-      return;
-    }
-
-    // the face outline in mirror coordinates
+  // the outline of my head: the face outline from faceMesh, made bigger
+  // (HEAD_GROW) so it also covers my hair, and stretched down to my neck
+  headShape(m, extra = 1) {
+    const HEAD_GROW = 1.3 * extra; // bigger = more hair / neck shows
     let k = faces[0].keypoints;
     let pts = FACE_OUTLINE.map((i) => ({
       x: m.x + (k[i].x / width) * m.w,
@@ -314,28 +323,58 @@ class Room {
       cx += p.x / pts.length;
       cy += p.y / pts.length;
     }
-
-    // black outside the outline, in 3 steps so the edge is soft:
-    // [how much bigger than the face, how dark]
-    for (let [grow, dark] of [
-      [1.15, 1],
-      [1.07, 0.5],
-      [1.0, 0.4],
-    ]) {
-      ctx.beginPath();
-      ctx.rect(m.x, m.y, m.w, m.h); // the whole mirror…
-      for (let i = 0; i < pts.length; i++) {
-        let x = cx + (pts[i].x - cx) * grow;
-        let y = cy + (pts[i].y - cy) * grow;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath(); // …minus the face ("evenodd" = the face is a hole)
-      ctx.fillStyle = "rgba(0,0,0," + dark + ")";
-      ctx.fill("evenodd");
+    let ctx = drawingContext;
+    ctx.beginPath();
+    for (let n = 0; n < pts.length; n++) {
+      let x = cx + (pts[n].x - cx) * HEAD_GROW;
+      let y = cy + (pts[n].y - cy) * HEAD_GROW;
+      if (y > cy) y += (y - cy) * 0.4; // the lower half reaches further down (neck)
+      if (n === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
     }
-    ctx.restore();
+    ctx.closePath();
   }
+}
+
+// MIRROR LOOK (change these to taste)
+const MIRROR_TINT = [165, 185, 180]; // the webcam colour: lower numbers = darker, more tinted
+const MIRROR_WASH = [60, 85, 75, 70]; // colour laid over my face (r, g, b, strength 0–255)
+const MIRROR_DUST = 1; // how dirty the glass is: 0 = clean, 1 = dusty, 2 = filthy
+
+// Dirt on the mirror glass, drawn once into its own picture:
+// specks of dust, a few smudges, fine scratches, and grime in the corners.
+function makeMirrorDust(w, h) {
+  let g = createGraphics(w, h);
+  g.pixelDensity(1);
+  g.noStroke();
+  // smudges: big, very faint blobs (old fingerprints / wiped steam)
+  for (let i = 0; i < 12 * MIRROR_DUST; i++) {
+    g.fill(200, 205, 195, random(6, 16));
+    g.ellipse(random(w), random(h), random(30, 110), random(20, 70));
+  }
+  // dust specks
+  for (let i = 0; i < 350 * MIRROR_DUST; i++) {
+    g.fill(220, 220, 210, random(25, 110));
+    g.circle(random(w), random(h), random(0.6, 2.2));
+  }
+  // fine scratches
+  g.noFill();
+  for (let i = 0; i < 10 * MIRROR_DUST; i++) {
+    g.stroke(230, 230, 220, random(20, 50));
+    g.strokeWeight(random(0.4, 0.9));
+    let x = random(w), y = random(h), a = random(TWO_PI), len = random(15, 60);
+    g.line(x, y, x + cos(a) * len, y + sin(a) * len);
+  }
+  // grime that gathers in the corners and edges
+  g.noStroke();
+  for (let i = 0; i < 25; i++) {
+    g.fill(40, 38, 30, 6 * MIRROR_DUST);
+    g.rect(0, 0, w, h); // darkens evenly…
+    g.erase(255 / 25, 0); // …then clear the middle a little each time
+    g.ellipse(w / 2, h / 2, w * (1.25 - i * 0.02), h * (1.25 - i * 0.02));
+    g.noErase();
+  }
+  return g;
 }
 
 // faceMesh point numbers that go around the edge of the face, in order
@@ -346,19 +385,16 @@ const FACE_OUTLINE = [
 ];
 
 function setupRooms() {
-  // appearance / end: x, y = centre of the picture, s = its height (1 = full screen).
-  // The pictures already show the creature coming closer, so most rooms use the
-  // same spot for both. In the bathroom she grows inside the mirror instead.
   let roomData = [
     {
       name: "Hallway",
       creatureName: "hallway",
-      sign: "bothClosed", // the hand sign which brings you here
-      signText: "Both fists", // the text that appears on the screen for the gesture
+      sign: "bothClosed", // the hand signe which brings you here
+      signText: "Both fists", // the text that appear on the screen for the gesture
       creator: drawHallway,
       isHallway: true,
-      appearance: { x: 320, y: 240, s: 1 },
-      end: { x: 320, y: 240, s: 1 },
+      appearance: { x: 320, y: 226, s: 0.52 }, // where the creature should appere, the back door
+      end: { x: width * 0.5, y: height * 0.6, s: 2.4 },
       lightRadius: 125, // the size of the lamp
     },
     {
@@ -367,8 +403,12 @@ function setupRooms() {
       sign: "RightOpen",
       signText: "right hand OPEN",
       creator: drawBedroom,
-      appearance: { x: 320, y: 240, s: 1 },
-      end: { x: 320, y: 240, s: 1 },
+      appearance: {
+        x: floorPoint(0.75, 0.22).x,
+        y: floorPoint(0.75, 0.22).y - wallHeightAt(0.22) * 0.04,
+        s: 0.28,
+      },
+      end: { x: width * 0.55, y: height * 0.68, s: 2.4 },
       lightRadius: 125,
     },
     {
@@ -377,8 +417,9 @@ function setupRooms() {
       sign: "RightClosed",
       signText: "right hand FIST",
       creator: drawKitchen,
-      appearance: { x: 320, y: 240, s: 1 },
-      end: { x: 320, y: 240, s: 1 },
+      appearance: { x: 250, y: 380, s: 0.32 },
+      end: { x: width * 0.52, y: height * 0.64, s: 2.4 },
+
       lightRadius: 125,
     },
     {
@@ -388,8 +429,10 @@ function setupRooms() {
       signText: "left hand OPEN",
       creator: drawBathroom,
       mirror: { x: 170, y: 40, w: 300, h: 225 },
-      appearance: { x: 400, y: 150, s: 0.25 },
-      end: { x: 300, y: 165, s: 0.5 },
+      // the creature stays on the RIGHT side of the mirror (x 170–470) and grows
+      appearance: { x: 420, y: 140, s: 0.3 },
+      end: { x: 400, y: 160, s: 0.6 },
+
       lightRadius: 125,
     },
     {
@@ -398,8 +441,9 @@ function setupRooms() {
       sign: "LeftClosed",
       signText: "left hand FIST",
       creator: drawLivingRoom,
-      appearance: { x: 320, y: 240, s: 1 },
-      end: { x: 320, y: 240, s: 1 },
+      appearance: { x: 370, y: 138, s: 0.3, rot: PI }, // upside down, on the ceiling
+      end: { x: 300, y: 125, s: 2.2, rot: PI },
+
       lightRadius: 125,
     },
     {
@@ -408,9 +452,10 @@ function setupRooms() {
       sign: "bothOpen",
       signText: "BOTH hands OPEN",
       creator: drawBasement,
-      appearance: { x: 320, y: 240, s: 1 },
-      end: { x: 320, y: 240, s: 1 },
-      lightRadius: 95, // it's darker down here compared to the other rooms.
+      appearance: { x: 320, y: 318, s: 0.3 },
+      end: { x: 320, y: 392, s: 2.5 },
+
+      lightRadius: 95, // it's darker down compared to the other rooms.
     },
   ];
 
@@ -576,7 +621,8 @@ function drawHallway(hCanvas) {
 }
 
 /////////////////////////////////////////////////////////
-//////////////////// BEDROOM ///////////////////////////  ////////////////////////////////////////////////////////////////////
+//////////////////// BEDROOM ///////////////////////////
+//  ////////////////////////////////////////////////////////////////////
 // something hides under the bed
 
 function drawBedroom(hCanvas) {
@@ -786,10 +832,10 @@ function drawBedroom(hCanvas) {
     base.y + 30 * size,
   );
 }
-
+///////////////////////////////////////////////////
 //////////////////// KITCHEN //////////////////////
+///////////////////////////////////////////////////
 // something stands in the empty corner
-
 function drawKitchen(hCanvas) {
   hCanvas.push();
   // Use a 640 x 800 coordinate system
@@ -1006,14 +1052,14 @@ function drawKitchen(hCanvas) {
   hCanvas.strokeWeight(8);
   hCanvas.line(370, 345, 370, 445);
   hCanvas.line(370, 525, 370, 635);
-  hCanvas.pop(); // undo the push() / scale() at the top
+  hCanvas.pop();
 }
 
-/////////////////////////////////////////////////////
-//////////////////// BATHROOM //////////////////////
+///////////////////////////////////////////////////////////////////
+//////////////////// BATHROOM //////////////////////////////////
+//////////////////////////////////////////////////////////////////
 // you stand at the mirror and see something behind you
 // (seen straight on, so no perspective needed)
-
 function drawBathroom(hCanvas) {
   hCanvas.background(24, 24, 21);
   hCanvas.noStroke();
@@ -1288,36 +1334,6 @@ function drawLivingRoom(hCanvas) {
 
   hCanvas.quad(230, 420, 260, 360, 260, 410, 230, 500);
 
-  // /////// STANDING FLOOR LAMP ///////
-
-  // // Warm glow behind the lamp
-  // hCanvas.noStroke();
-  // hCanvas.fill(220, 145, 70, 17);
-  // hCanvas.ellipse(520, 285, 200, 235);
-
-  // // Lamp base
-  // hCanvas.fill(45, 39, 32);
-  // hCanvas.ellipse(520, 426, 42, 10);
-
-  // // Pole
-  // hCanvas.stroke(105, 87, 62);
-  // hCanvas.strokeWeight(5);
-  // hCanvas.line(520, 420, 520, 275);
-  // hCanvas.noStroke();
-
-  // // Shade
-  // hCanvas.fill(185, 139, 88);
-  // hCanvas.quad(
-  //   502, 250,
-  //   538, 250,
-  //   552, 290,
-  //   488, 290
-  // );
-
-  // // Bright underside
-  // hCanvas.fill(226, 172, 106, 130);
-  // hCanvas.ellipse(520, 290, 64, 10);
-
   /////// PLANT NEAR THE CORNER ///////
 
   // Pot
@@ -1371,7 +1387,7 @@ function drawLivingRoom(hCanvas) {
   hCanvas.ellipse(510, 450, 65, 20);
   hCanvas.fill(22, 22, 20);
   hCanvas.ellipse(510, 450, 43, 8);
-  hCanvas.pop(); // undo the push() / scale() at the top
+  hCanvas.pop();
 }
 
 /////////////////////////////////////////////////////////////////

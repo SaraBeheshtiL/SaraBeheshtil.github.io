@@ -257,18 +257,140 @@ class Room {
     }
   }
 
-  // in bathroom I have a mirror which shows my real webcam
+  // in bathroom I have a mirror which shows my real webcam.
+  // The mirror is drawn in 3 steps, back to front:
+  //   1. black glass   2. the creature   3. only my face + neck, on top of her
   drawMirror() {
     let m = this.mirror;
+
+    // 1. black glass (no room behind me, just darkness)
+    noStroke();
+    fill(0);
+    rect(m.x, m.y, m.w, m.h);
+
+    // 2. the creature (Creature.display() keeps her inside the mirror)
+    for (let c of creatures) c.display();
+
+    // 3. my face + neck from the webcam, cut to the shape of my head (faceMesh).
+    //    Drawn 3 times, from a bigger faint shape to the real one, so the edge
+    //    fades softly into the black instead of a hard cut.
+    if (faces.length > 0) {
+      let ctx = drawingContext;
+      for (let [grow, alpha] of [
+        [1.15, 70],
+        [1.07, 140],
+        [1.0, 255],
+      ]) {
+        ctx.save();
+        this.headShape(m, grow);
+        ctx.clip();
+        this.drawWebcam(m, alpha);
+        ctx.restore();
+      }
+    }
+
+    // 4. dust and dirt ON the glass, over everything (me and the creature)
+    if (!this.dustLayer) this.dustLayer = makeMirrorDust(m.w, m.h);
+    image(this.dustLayer, m.x, m.y);
+  }
+
+  // the webcam picture with the cold tint and the steam (my original mirror)
+  drawWebcam(m, alpha = 255) {
     push();
-    tint(200, 210, 215); // this applies a bluish tint to the webcam image, making it feel colder and natural
+    tint(MIRROR_TINT[0], MIRROR_TINT[1], MIRROR_TINT[2], alpha); // cold, sickly tint
     image(video, m.x, m.y, m.w, m.h); //the webcam video will appear inside the mirror rectangle.
     pop();
     noStroke();
-    fill(170, 180, 180, 45); // steam / dirty glass
+    // a colour wash on top: makes my skin look grey-green and lifeless
+    fill(
+      MIRROR_WASH[0],
+      MIRROR_WASH[1],
+      MIRROR_WASH[2],
+      MIRROR_WASH[3] * (alpha / 255),
+    );
+    rect(m.x, m.y, m.w, m.h);
+    fill(170, 180, 180, 45 * (alpha / 255)); // steam / dirty glass
     rect(m.x, m.y, m.w, m.h);
   }
+
+  // the outline of my head: the face outline from faceMesh, made bigger
+  // (HEAD_GROW) so it also covers my hair, and stretched down to my neck
+  headShape(m, extra = 1) {
+    const HEAD_GROW = 1.3 * extra; // bigger = more hair / neck shows
+    let k = faces[0].keypoints;
+    let pts = FACE_OUTLINE.map((i) => ({
+      x: m.x + (k[i].x / width) * m.w,
+      y: m.y + (k[i].y / height) * m.h,
+    }));
+    let cx = 0,
+      cy = 0;
+    for (let p of pts) {
+      cx += p.x / pts.length;
+      cy += p.y / pts.length;
+    }
+    let ctx = drawingContext;
+    ctx.beginPath();
+    for (let n = 0; n < pts.length; n++) {
+      let x = cx + (pts[n].x - cx) * HEAD_GROW;
+      let y = cy + (pts[n].y - cy) * HEAD_GROW;
+      if (y > cy) y += (y - cy) * 0.4; // the lower half reaches further down (neck)
+      if (n === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  }
 }
+
+// MIRROR LOOK (change these to taste)
+const MIRROR_TINT = [165, 185, 180]; // the webcam colour: lower numbers = darker, more tinted
+const MIRROR_WASH = [60, 85, 75, 70]; // colour laid over my face (r, g, b, strength 0–255)
+const MIRROR_DUST = 1; // how dirty the glass is: 0 = clean, 1 = dusty, 2 = filthy
+
+// Dirt on the mirror glass, drawn once into its own picture:
+// specks of dust, a few smudges, fine scratches, and grime in the corners.
+function makeMirrorDust(w, h) {
+  let g = createGraphics(w, h);
+  g.pixelDensity(1);
+  g.noStroke();
+  // smudges: big, very faint blobs (old fingerprints / wiped steam)
+  for (let i = 0; i < 12 * MIRROR_DUST; i++) {
+    g.fill(200, 205, 195, random(6, 16));
+    g.ellipse(random(w), random(h), random(30, 110), random(20, 70));
+  }
+  // dust specks
+  for (let i = 0; i < 350 * MIRROR_DUST; i++) {
+    g.fill(220, 220, 210, random(25, 110));
+    g.circle(random(w), random(h), random(0.6, 2.2));
+  }
+  // fine scratches
+  g.noFill();
+  for (let i = 0; i < 10 * MIRROR_DUST; i++) {
+    g.stroke(230, 230, 220, random(20, 50));
+    g.strokeWeight(random(0.4, 0.9));
+    let x = random(w),
+      y = random(h),
+      a = random(TWO_PI),
+      len = random(15, 60);
+    g.line(x, y, x + cos(a) * len, y + sin(a) * len);
+  }
+  // grime that gathers in the corners and edges
+  g.noStroke();
+  for (let i = 0; i < 25; i++) {
+    g.fill(40, 38, 30, 6 * MIRROR_DUST);
+    g.rect(0, 0, w, h); // darkens evenly…
+    g.erase(255 / 25, 0); // …then clear the middle a little each time
+    g.ellipse(w / 2, h / 2, w * (1.25 - i * 0.02), h * (1.25 - i * 0.02));
+    g.noErase();
+  }
+  return g;
+}
+
+// faceMesh point numbers that go around the edge of the face, in order
+const FACE_OUTLINE = [
+  10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378,
+  400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21,
+  54, 103, 67, 109,
+];
 
 function setupRooms() {
   let roomData = [
@@ -315,8 +437,9 @@ function setupRooms() {
       signText: "left hand OPEN",
       creator: drawBathroom,
       mirror: { x: 170, y: 40, w: 300, h: 225 },
-      appearance: { x: 170 + 300 * 0.78, y: 40 + 225 * 0.38, s: 0.25 },
-      end: { x: 170 + 300 * 0.27, y: 40 + 225 * 0.45, s: 1.15 },
+      // the creature stays on the RIGHT side of the mirror (x 170–470) and grows
+      appearance: { x: 400, y: 300, s: 0.1 },
+      end: { x: 400, y: 160, s: 0.6 },
 
       lightRadius: 125,
     },

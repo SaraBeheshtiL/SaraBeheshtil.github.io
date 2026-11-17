@@ -32,7 +32,7 @@ let creatures = [];
 let dust = [];
 
 /// this is the timer and the game loop
-let TOTAL_TIME = 120; // seconds
+let TOTAL_TIME = 60; // seconds
 let startTime = 0;
 let penalty = 0; // seconds lost when a creature gets you
 let timeLeft = TOTAL_TIME;
@@ -152,8 +152,7 @@ function playFrame() {
   }
 
   // ---- things you can see in the dark ----
-  for (let c of creatures) c.displayGlimpse();
-  updateDust(lightOn, radius);
+  for (let c of creatures) if (!c.room.mirror) c.displayGlimpse(); // not over you in the mirror
 
   if (hurtFlash > 0) {
     noStroke();
@@ -162,7 +161,7 @@ function playFrame() {
     hurtFlash -= 8;
   }
   drawJumpScare();
-  drawGrain();
+  //drawGrain();
   drawHUD();
   drawML5Debug();
 }
@@ -188,23 +187,8 @@ function updateRoom(lightOn, radius) {
     }
   }
 
-  for (let c of creatures) c.display();
-}
-
-function updateDust(lightOn, radius) {
-  if (lightOn && random() < 0.6) {
-    dust.push(
-      new Dust(
-        lookX + random(-radius, radius) * 0.5,
-        lookY + random(-radius, radius) * 0.5,
-      ),
-    );
-  }
-  for (let i = dust.length - 1; i >= 0; i--) {
-    dust[i].update();
-    dust[i].display();
-    if (dust[i].isGone()) dust.splice(i, 1);
-  }
+  // the bathroom draws its creature itself, inside the mirror BEHIND you (see drawMirror in rooms.js)
+  if (!room.mirror) for (let c of creatures) c.display();
 }
 
 //////////////////// CHANGING ROOMS //////////////////////
@@ -264,7 +248,7 @@ function drawStart() {
     let k = faces[0].keypoints;
     for (let i = 0; i < k.length; i += 3) circle(k[i].x, k[i].y, 2);
   }
-  drawGrain();
+  //drawGrain();
 
   noStroke();
   textAlign(CENTER, CENTER);
@@ -286,7 +270,7 @@ function drawStart() {
     206,
   );
   text(
-    "Escape all 5 rooms and get back to the hallway in 2:00.",
+    "Escape all 5 rooms and get back to the hallway in 1:00.",
     width / 2,
     228,
   );
@@ -596,18 +580,17 @@ function anyCreaturePicture() {
 }
 
 //////////////////// EFFECTS //////////////////////
+const BEAM_CLEAR = 0.7; // how much of the beam shows your room exactly as drawn (0.7 = 70%)
 
 function drawDarkness(x, y, r) {
   let ctx = drawingContext;
-  let g = ctx.createRadialGradient(x, y, r * 0.2, x, y, r);
+
+  // inside BEAM_CLEAR: nothing is drawn over your room (its true colours)
+  // from there to the edge: fades to near black
+  let g = ctx.createRadialGradient(x, y, r * BEAM_CLEAR, x, y, r);
   g.addColorStop(0, "rgba(0,0,0,0)");
   g.addColorStop(1, "rgba(0,0,0,0.96)");
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, width, height);
-  let glow = ctx.createRadialGradient(x, y, 0, x, y, r * 0.8);
-  glow.addColorStop(0, "rgba(255,235,190,0.15)");
-  glow.addColorStop(1, "rgba(255,235,190,0)");
-  ctx.fillStyle = glow;
   ctx.fillRect(0, 0, width, height);
 }
 

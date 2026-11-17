@@ -32,7 +32,7 @@ let creatures = [];
 let dust = [];
 
 /// this is the timer and the game loop
-let TOTAL_TIME = 120; // seconds
+let TOTAL_TIME = 60; // seconds
 let startTime = 0;
 let penalty = 0; // seconds lost when a creature gets you
 let timeLeft = TOTAL_TIME;
@@ -152,7 +152,7 @@ function playFrame() {
   }
 
   // ---- things you can see in the dark ----
-  for (let c of creatures) c.displayGlimpse();
+  for (let c of creatures) if (!c.room.mirror) c.displayGlimpse(); // not over you in the mirror
 
   if (hurtFlash > 0) {
     noStroke();
@@ -187,7 +187,8 @@ function updateRoom(lightOn, radius) {
     }
   }
 
-  for (let c of creatures) c.display();
+  // the bathroom draws its creature itself, inside the mirror BEHIND you (see drawMirror in rooms.js)
+  if (!room.mirror) for (let c of creatures) c.display();
 }
 
 //////////////////// CHANGING ROOMS //////////////////////
@@ -269,7 +270,7 @@ function drawStart() {
     206,
   );
   text(
-    "Escape all 5 rooms and get back to the hallway in 2:00.",
+    "Escape all 5 rooms and get back to the hallway in 1:00.",
     width / 2,
     228,
   );
