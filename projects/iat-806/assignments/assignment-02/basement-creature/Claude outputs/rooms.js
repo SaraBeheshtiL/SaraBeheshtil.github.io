@@ -264,9 +264,60 @@ class Room {
     tint(200, 210, 215); // this applies a bluish tint to the webcam image, making it feel colder and natural
     image(video, m.x, m.y, m.w, m.h); //the webcam video will appear inside the mirror rectangle.
     pop();
-    noStroke();
-    fill(170, 180, 180, 45); // steam / dirty glass
-    rect(m.x, m.y, m.w, m.h);
+    this.blackBackground(m);
+  }
+
+  // Everything in the mirror turns black except an oval around YOUR head and
+  // shoulders, so you seem to stand in a pitch-dark bathroom.
+  // faceMesh tells us where the face is; the oval follows it smoothly.
+  blackBackground(m) {
+    let ctx = drawingContext;
+
+    if (faces.length > 0) {
+      let k = faces[0].keypoints;
+      // face size and centre in camera coordinates (0–640, 0–480)
+      let faceW = dist(k[234].x, k[234].y, k[454].x, k[454].y); // cheek to cheek
+      let faceH = dist(k[10].x, k[10].y, k[152].x, k[152].y); // forehead to chin
+      let cx = k[1].x; // nose
+      let cy = k[1].y + faceH * 0.25; // a bit lower, to include the neck
+      // smooth it so the oval doesn't jitter
+      this.spot = this.spot || { x: cx, y: cy, w: faceW, h: faceH };
+      this.spot.x = lerp(this.spot.x, cx, 0.3);
+      this.spot.y = lerp(this.spot.y, cy, 0.3);
+      this.spot.w = lerp(this.spot.w, faceW, 0.3);
+      this.spot.h = lerp(this.spot.h, faceH, 0.3);
+    }
+
+    ctx.save();
+    // only paint inside the mirror
+    ctx.beginPath();
+    ctx.rect(m.x, m.y, m.w, m.h);
+    ctx.clip();
+
+    if (!this.spot) {
+      // no face seen yet: the mirror is just black
+      ctx.fillStyle = "black";
+      ctx.fillRect(m.x, m.y, m.w, m.h);
+    } else {
+      // camera coordinates → mirror coordinates
+      let sx = m.w / width,
+        sy = m.h / height;
+      let x = m.x + this.spot.x * sx;
+      let y = m.y + this.spot.y * sy;
+      let rx = this.spot.w * 1.25 * sx; // how wide the visible oval is (head + hair)
+      let ry = this.spot.h * 1.6 * sy; // how tall (head + neck + shoulders)
+
+      // an oval gradient: clear in the middle, black at the edge and beyond
+      ctx.translate(x, y);
+      ctx.scale(1, ry / rx);
+      let g = ctx.createRadialGradient(0, 0, rx * 0.55, 0, 0, rx);
+      g.addColorStop(0, "rgba(0,0,0,0)");
+      g.addColorStop(1, "rgba(0,0,0,1)");
+      ctx.fillStyle = g;
+      // cover the whole mirror (in the scaled space)
+      ctx.fillRect(-width * 2, -height * 4, width * 4, height * 8);
+    }
+    ctx.restore();
   }
 }
 

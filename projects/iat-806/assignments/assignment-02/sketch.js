@@ -247,7 +247,7 @@ function drawStart() {
     let k = faces[0].keypoints;
     for (let i = 0; i < k.length; i += 3) circle(k[i].x, k[i].y, 2);
   }
-  drawGrain();
+  //drawGrain();
 
   noStroke();
   textAlign(CENTER, CENTER);
@@ -579,18 +579,17 @@ function anyCreaturePicture() {
 }
 
 //////////////////// EFFECTS //////////////////////
+const BEAM_CLEAR = 0.7; // how much of the beam shows your room exactly as drawn (0.7 = 70%)
 
 function drawDarkness(x, y, r) {
   let ctx = drawingContext;
-  let g = ctx.createRadialGradient(x, y, r * 0.2, x, y, r);
+
+  // inside BEAM_CLEAR: nothing is drawn over your room (its true colours)
+  // from there to the edge: fades to near black
+  let g = ctx.createRadialGradient(x, y, r * BEAM_CLEAR, x, y, r);
   g.addColorStop(0, "rgba(0,0,0,0)");
   g.addColorStop(1, "rgba(0,0,0,0.96)");
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, width, height);
-  let glow = ctx.createRadialGradient(x, y, 0, x, y, r * 0.8);
-  glow.addColorStop(0, "rgba(255,235,190,0.15)");
-  glow.addColorStop(1, "rgba(255,235,190,0)");
-  ctx.fillStyle = glow;
   ctx.fillRect(0, 0, width, height);
 }
 
