@@ -10,7 +10,7 @@ let faceMesh, handPose;
 let faces = [];
 let hands = [];
 
-let MOUSE_MODE = false;
+let MOUSE_MODE = false; // to experiment with mouse instead of the camera (press M to toggle)
 let SWAP_HANDS = false; // if left/right come out backwards, set this to true (or press S)
 
 // what the game reads every frame

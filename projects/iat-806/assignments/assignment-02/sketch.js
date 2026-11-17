@@ -163,6 +163,7 @@ function playFrame() {
   drawJumpScare();
   drawGrain();
   drawHUD();
+  drawML5Debug();
 }
 
 function updateRoom(lightOn, radius) {
@@ -674,6 +675,7 @@ function keyPressed() {
   }
   if (key === "m" || key === "M") MOUSE_MODE = !MOUSE_MODE;
   if (key === "s" || key === "S") SWAP_HANDS = !SWAP_HANDS;
+  if (key === "d" || key === "D") SHOW_ML5_DEBUG = !SHOW_ML5_DEBUG;
   if (
     (key === "r" || key === "R") &&
     (gameState === "ghost" || gameState === "win")
@@ -683,4 +685,48 @@ function keyPressed() {
     let sign = keyboardRoom();
     if (sign !== "none") goTo(sign);
   }
+}
+
+// Always-visible diagnostics while playing (press D to toggle).
+let SHOW_ML5_DEBUG = true;
+function drawML5Debug() {
+  if (!SHOW_ML5_DEBUG) return;
+  push();
+  noStroke();
+  fill(0, 205);
+  rect(8, height - 91, width - 16, 73, 6);
+  fill(255);
+  textAlign(LEFT, TOP);
+  textSize(12);
+  text(
+    "ml5 ready: " +
+      !!bodyStatus.modelsReady +
+      "   camera: " +
+      bodyStatus.camera +
+      "   face callbacks: " +
+      bodyStatus.faceResults +
+      "   hand callbacks: " +
+      bodyStatus.handResults,
+    16,
+    height - 84,
+  );
+  text(
+    "Hands: " +
+      hands.length +
+      "   raw: " +
+      hands.map((h) => h.handedness).join(",") +
+      "   gesture: " +
+      readGesture() +
+      "   held: " +
+      gestureFrames +
+      "/" +
+      GESTURE_HOLD,
+    16,
+    height - 65,
+  );
+  if (bodyStatus.error) {
+    fill(255, 120, 120);
+    text(bodyStatus.error, 16, height - 46);
+  }
+  pop();
 }
