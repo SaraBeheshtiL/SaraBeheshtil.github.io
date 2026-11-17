@@ -7,6 +7,8 @@
 //   keys 1–5 = rooms, H = hallway
 
 let faceMesh, handPose;
+let bodySeg; // body segmentation: finds your whole body (used only in the bathroom mirror)
+let bodyMask = null; // latest mask: black where the background is, see-through where YOU are
 let faces = [];
 let hands = [];
 
@@ -98,6 +100,13 @@ function setupBody() {
   // flipped: false → the models give raw camera points; mirrorPoints() flips them
   faceMesh = ml5.faceMesh({ maxFaces: 1, refineLandmarks: false, flipped: false });
   handPose = ml5.handPose({ maxHands: 2, flipped: false });
+  bodySeg = ml5.bodySegmentation("SelfieSegmentation", { maskType: "background" });
+  bodySeg.ready
+    .then(() => {
+      bodyStatus.segReady = true;
+      console.log("BodySegmentation model loaded");
+    })
+    .catch((err) => console.error("BodySegmentation model error:", err));
 
   // mark each model as ready only when it has REALLY finished loading
   faceMesh.ready
@@ -146,6 +155,18 @@ function startDetectionWhenReady() {
     console.log("HandPose detection started");
   }
   bodyStatus.detecting = bodyStatus.faceDetecting || bodyStatus.handDetecting;
+
+  // body segmentation is heavy, so it only runs while you're in the bathroom
+  let inBathroom =
+    typeof currentRoom !== "undefined" && currentRoom && currentRoom.mirror && gameState === "room";
+  if (inBathroom && bodyStatus.segReady && !bodyStatus.segDetecting) {
+    bodyStatus.segDetecting = true;
+    bodySeg.detectStart(video, (result) => (bodyMask = result.mask));
+  } else if (!inBathroom && bodyStatus.segDetecting) {
+    bodyStatus.segDetecting = false;
+    bodySeg.detectStop();
+    bodyMask = null; // don't show an old mask next time
+  }
 }
 
 // mirror every keypoint left↔right so it lines up with the mirrored video

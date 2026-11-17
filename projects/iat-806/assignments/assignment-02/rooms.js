@@ -945,7 +945,6 @@ function drawKitchen(hCanvas) {
 //////////////////////////////////////////////////////////////////
 // you stand at the mirror and see something behind you
 // (seen straight on, so no perspective needed)
-
 function drawBathroom(hCanvas) {
   hCanvas.background(24, 24, 21);
   hCanvas.noStroke();

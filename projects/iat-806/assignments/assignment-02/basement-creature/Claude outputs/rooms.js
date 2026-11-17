@@ -264,62 +264,86 @@ class Room {
     tint(200, 210, 215); // this applies a bluish tint to the webcam image, making it feel colder and natural
     image(video, m.x, m.y, m.w, m.h); //the webcam video will appear inside the mirror rectangle.
     pop();
-    this.blackBackground(m);
+
+    if (bodyMask) {
+      // YOUR BODY + FACE: the mask is black everywhere except you
+      push();
+      drawingContext.filter = "blur(3px)"; // soften the cut-out edge
+      if (MIRROR_POINTS) {
+        // the mask comes from the raw camera, so mirror it like the video
+        translate(m.x + m.w, m.y);
+        scale(-1, 1);
+        image(bodyMask, 0, 0, m.w, m.h);
+      } else {
+        image(bodyMask, m.x, m.y, m.w, m.h);
+      }
+      drawingContext.filter = "none";
+      pop();
+    } else {
+      // body model not ready yet: show just the face for now
+      this.blackBackground(m);
+    }
   }
 
-  // Everything in the mirror turns black except an oval around YOUR head and
-  // shoulders, so you seem to stand in a pitch-dark bathroom.
-  // faceMesh tells us where the face is; the oval follows it smoothly.
+  // The mirror is black except YOUR FACE.
+  // faceMesh gives a ring of points around the face (jaw, cheeks, forehead);
+  // we paint black everywhere outside that ring.
   blackBackground(m) {
     let ctx = drawingContext;
-
-    if (faces.length > 0) {
-      let k = faces[0].keypoints;
-      // face size and centre in camera coordinates (0–640, 0–480)
-      let faceW = dist(k[234].x, k[234].y, k[454].x, k[454].y); // cheek to cheek
-      let faceH = dist(k[10].x, k[10].y, k[152].x, k[152].y); // forehead to chin
-      let cx = k[1].x; // nose
-      let cy = k[1].y + faceH * 0.25; // a bit lower, to include the neck
-      // smooth it so the oval doesn't jitter
-      this.spot = this.spot || { x: cx, y: cy, w: faceW, h: faceH };
-      this.spot.x = lerp(this.spot.x, cx, 0.3);
-      this.spot.y = lerp(this.spot.y, cy, 0.3);
-      this.spot.w = lerp(this.spot.w, faceW, 0.3);
-      this.spot.h = lerp(this.spot.h, faceH, 0.3);
-    }
-
     ctx.save();
-    // only paint inside the mirror
     ctx.beginPath();
-    ctx.rect(m.x, m.y, m.w, m.h);
+    ctx.rect(m.x, m.y, m.w, m.h); // only paint inside the mirror
     ctx.clip();
 
-    if (!this.spot) {
-      // no face seen yet: the mirror is just black
-      ctx.fillStyle = "black";
+    if (faces.length === 0) {
+      ctx.fillStyle = "black"; // no face: the mirror is just black
       ctx.fillRect(m.x, m.y, m.w, m.h);
-    } else {
-      // camera coordinates → mirror coordinates
-      let sx = m.w / width,
-        sy = m.h / height;
-      let x = m.x + this.spot.x * sx;
-      let y = m.y + this.spot.y * sy;
-      let rx = this.spot.w * 1.25 * sx; // how wide the visible oval is (head + hair)
-      let ry = this.spot.h * 1.6 * sy; // how tall (head + neck + shoulders)
+      ctx.restore();
+      return;
+    }
 
-      // an oval gradient: clear in the middle, black at the edge and beyond
-      ctx.translate(x, y);
-      ctx.scale(1, ry / rx);
-      let g = ctx.createRadialGradient(0, 0, rx * 0.55, 0, 0, rx);
-      g.addColorStop(0, "rgba(0,0,0,0)");
-      g.addColorStop(1, "rgba(0,0,0,1)");
-      ctx.fillStyle = g;
-      // cover the whole mirror (in the scaled space)
-      ctx.fillRect(-width * 2, -height * 4, width * 4, height * 8);
+    // the face outline in mirror coordinates
+    let k = faces[0].keypoints;
+    let pts = FACE_OUTLINE.map((i) => ({
+      x: m.x + (k[i].x / width) * m.w,
+      y: m.y + (k[i].y / height) * m.h,
+    }));
+    let cx = 0,
+      cy = 0;
+    for (let p of pts) {
+      cx += p.x / pts.length;
+      cy += p.y / pts.length;
+    }
+
+    // black outside the outline, in 3 steps so the edge is soft:
+    // [how much bigger than the face, how dark]
+    for (let [grow, dark] of [
+      [1.15, 1],
+      [1.07, 0.5],
+      [1.0, 0.4],
+    ]) {
+      ctx.beginPath();
+      ctx.rect(m.x, m.y, m.w, m.h); // the whole mirror…
+      for (let i = 0; i < pts.length; i++) {
+        let x = cx + (pts[i].x - cx) * grow;
+        let y = cy + (pts[i].y - cy) * grow;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath(); // …minus the face ("evenodd" = the face is a hole)
+      ctx.fillStyle = "rgba(0,0,0," + dark + ")";
+      ctx.fill("evenodd");
     }
     ctx.restore();
   }
 }
+
+// faceMesh point numbers that go around the edge of the face, in order
+const FACE_OUTLINE = [
+  10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379,
+  378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162,
+  21, 54, 103, 67, 109,
+];
 
 function setupRooms() {
   // appearance / end: x, y = centre of the picture, s = its height (1 = full screen).
