@@ -15,25 +15,6 @@
 
 // the back wall: a rectangle in the middle of the screen for the hallway.
 let BackWall = { x1: 240, y1: 150, x2: 400, y2: 265 };
-
-// let currentRoom = 0;
-
-// function setup() {
-//   createCanvas(640, 480);
-//   setupRooms();
-// }
-
-// function draw() {
-//   background(0);
-//   rooms[currentRoom].display();
-// }
-
-// function keyPressed() {
-//   if (key >= "1" && key <= "6") {
-//     currentRoom = Number(key) - 1;
-//   }
-// }
-
 // When I want to find a point on the left or right wall
 function wallPoint(side, t, h) {
   /// side is left or right // t means the depth of the room between 0 to 1 (0 means close to viewer and 1 means the back wall
@@ -247,16 +228,15 @@ let rooms = []; // rooms is an array of six rooms
 //roomData is a parameter containing all the information needed to create a specific room
 class Room {
   constructor(roomData) {
-    this.creatureName = roomData.creatureName; // key for the eight creature PNGs
     this.name = roomData.name; // reads th ename of the room
     this.sign = roomData.sign; // the hand sign that brings the player here
     this.signText = roomData.signText; // this will be the text shows th e gesture
     this.creator = roomData.creator; // the function that draws this room (storing a function inside a property.)
     this.isHallway = roomData.isHallway; // the first frame. I'm going to identify if this room is hallway
     ////////// properties which defines the creature associated with each room /////////////////////////////
+    this.creatureName = roomData.creatureName; // which pictures to use (see CREATURE_FILES in sketch.js)
     this.appearance = roomData.appearance; // where the creature starts {x, y, s, rot}
     this.end = roomData.end; // where the creature ends or it got you
-    this.ghostFile = roomData.ghostFile;
 
     ///// this is flashlight effect, the radius of the flashlight effect for that room.
     this.lightRadius = roomData.lightRadius; // how far the headlamp reaches
@@ -301,7 +281,6 @@ function setupRooms() {
       isHallway: true,
       appearance: { x: 320, y: 226, s: 0.52 }, // where the creature should appere, the back door
       end: { x: width * 0.5, y: height * 0.6, s: 2.4 },
-      ghostFile: "ghost6.png", // the images of the creature
       lightRadius: 125, // the size of the lamp
     },
     {
@@ -316,7 +295,6 @@ function setupRooms() {
         s: 0.28,
       },
       end: { x: width * 0.55, y: height * 0.68, s: 2.4 },
-      ghostFile: "ghost1.png",
       lightRadius: 125,
     },
     {
@@ -325,9 +303,9 @@ function setupRooms() {
       sign: "RightClosed",
       signText: "right hand FIST",
       creator: drawKitchen,
-      appearance: { x: BackWall.x2 - 14, y: BackWall.y2 - 38, s: 0.32 },
+      appearance: { x: 300, y: 380, s: 0.32 },
       end: { x: width * 0.52, y: height * 0.64, s: 2.4 },
-      ghostFile: "ghost2.png",
+
       lightRadius: 125,
     },
     {
@@ -339,7 +317,7 @@ function setupRooms() {
       mirror: { x: 170, y: 40, w: 300, h: 225 },
       appearance: { x: 170 + 300 * 0.78, y: 40 + 225 * 0.38, s: 0.25 },
       end: { x: 170 + 300 * 0.27, y: 40 + 225 * 0.45, s: 1.15 },
-      ghostFile: "ghost3.png",
+
       lightRadius: 125,
     },
     {
@@ -350,7 +328,7 @@ function setupRooms() {
       creator: drawLivingRoom,
       appearance: { x: 370, y: 138, s: 0.3, rot: PI }, // upside down, on the ceiling
       end: { x: 300, y: 125, s: 2.2, rot: PI },
-      ghostFile: "ghost4.png",
+
       lightRadius: 125,
     },
     {
@@ -361,7 +339,7 @@ function setupRooms() {
       creator: drawBasement,
       appearance: { x: 320, y: 318, s: 0.3 },
       end: { x: 320, y: 392, s: 2.5 },
-      ghostFile: "ghost5.png",
+
       lightRadius: 95, // it's darker down compared to the other rooms.
     },
   ];
@@ -738,10 +716,10 @@ function drawBedroom(hCanvas) {
     base.y + 30 * size,
   );
 }
-
+///////////////////////////////////////////////////
 //////////////////// KITCHEN //////////////////////
+///////////////////////////////////////////////////
 // something stands in the empty corner
-
 function drawKitchen(hCanvas) {
   hCanvas.push();
   // Use a 640 x 800 coordinate system
