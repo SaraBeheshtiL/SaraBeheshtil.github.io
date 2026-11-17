@@ -563,6 +563,15 @@ function drawHUD() {
     }
   }
 
+  // HandPose diagnostics during play, including before a gesture is confirmed.
+  push();
+  noStroke();
+  fill(255, 230, 160);
+  textAlign(LEFT, TOP);
+  textSize(12);
+  text("Hands: " + hands.length + " | " + readGesture(), 12, height - 42);
+  pop();
+
   // small camera preview so you can see your hands
   push();
   tint(255, 110);
@@ -658,6 +667,11 @@ function mousePressed() {
 }
 
 function keyPressed() {
+  // Debug entry: separates the start-screen eye test from gesture testing.
+  if (keyCode === ENTER && gameState === "start") {
+    startGame();
+    return;
+  }
   if (key === "m" || key === "M") MOUSE_MODE = !MOUSE_MODE;
   if (key === "s" || key === "S") SWAP_HANDS = !SWAP_HANDS;
   if (

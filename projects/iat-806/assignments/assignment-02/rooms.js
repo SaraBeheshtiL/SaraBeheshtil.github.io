@@ -247,6 +247,7 @@ let rooms = []; // rooms is an array of six rooms
 //roomData is a parameter containing all the information needed to create a specific room
 class Room {
   constructor(roomData) {
+    this.creatureName = roomData.creatureName; // key for the eight creature PNGs
     this.name = roomData.name; // reads th ename of the room
     this.sign = roomData.sign; // the hand sign that brings the player here
     this.signText = roomData.signText; // this will be the text shows th e gesture
@@ -293,6 +294,7 @@ function setupRooms() {
   let roomData = [
     {
       name: "Hallway",
+      creatureName: "hallway",
       sign: "bothClosed", // the hand signe which brings you here
       signText: "Both fists", // the text that appear on the screen for the gesture
       creator: drawHallway,
@@ -304,6 +306,7 @@ function setupRooms() {
     },
     {
       name: "Bedroom",
+      creatureName: "bedroom",
       sign: "RightOpen",
       signText: "right hand OPEN",
       creator: drawBedroom,
@@ -318,6 +321,7 @@ function setupRooms() {
     },
     {
       name: "Kitchen",
+      creatureName: "kitchen",
       sign: "RightClosed",
       signText: "right hand FIST",
       creator: drawKitchen,
@@ -328,6 +332,7 @@ function setupRooms() {
     },
     {
       name: "Bathroom",
+      creatureName: "bathroom",
       sign: "LeftOpen",
       signText: "left hand OPEN",
       creator: drawBathroom,
@@ -339,6 +344,7 @@ function setupRooms() {
     },
     {
       name: "Living Room",
+      creatureName: "livingroom",
       sign: "LeftClosed",
       signText: "left hand FIST",
       creator: drawLivingRoom,
@@ -349,6 +355,7 @@ function setupRooms() {
     },
     {
       name: "Basement",
+      creatureName: "basement",
       sign: "bothOpen",
       signText: "BOTH hands OPEN",
       creator: drawBasement,

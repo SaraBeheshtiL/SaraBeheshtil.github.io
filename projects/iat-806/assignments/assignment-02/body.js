@@ -42,7 +42,7 @@ const LOST_GRACE = 15; // ~0.25 s
 // gesture holding
 let gestureNow = "none";
 let gestureFrames = 0;
-const GESTURE_HOLD = 45; // ~0.75 s to confirm a sign
+const GESTURE_HOLD = 15; // quick confirmation while debugging; raise later // ~0.75 s to confirm a sign
 
 // how strongly head turning moves the light
 const GAIN_X = 2.6;
@@ -53,6 +53,7 @@ let bodyStatus = {
   ml5: false, // did the ml5 library load?
   camera: false, // is the webcam giving pictures?
   detecting: false, // have we started faceMesh + handPose?
+  handResults: 0, // number of HandPose callbacks received
   faceResults: 0, // how many times faceMesh has answered
   eyeRatio: 0, // your current eye-open number
   error: "",
@@ -96,7 +97,10 @@ function startDetectionWhenReady() {
     faces = results;
     bodyStatus.faceResults++;
   });
-  handPose.detectStart(video, (results) => (hands = results));
+  handPose.detectStart(video, (results) => {
+    hands = results || [];
+    bodyStatus.handResults++;
+  });
 }
 
 //////////////////// FACE //////////////////////
@@ -324,6 +328,15 @@ function drawBodyStatus(x, y) {
       ]);
     }
   }
+  lines.push([
+    "Hands: " +
+      hands.length +
+      " | gesture: " +
+      readGesture() +
+      " | hand callbacks: " +
+      bodyStatus.handResults,
+    color(255, 220, 120),
+  ]);
   if (bodyStatus.error) lines.push([bodyStatus.error, color(255, 90, 90)]);
   for (let i = 0; i < lines.length; i++) {
     fill(lines[i][1]);
