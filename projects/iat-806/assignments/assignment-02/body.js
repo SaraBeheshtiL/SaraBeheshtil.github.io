@@ -16,7 +16,7 @@ let MOUSE_MODE = false;
 // The video is drawn mirrored (like a real mirror). The face/hand points must be
 // mirrored the same way, or they move opposite to you. We do that ourselves
 // (instead of ml5's "flipped" option) so it's one clear switch:
-let MIRROR_POINTS = true; // press F if the face dots move opposite to your face
+let MIRROR_POINTS = false; // press F if the face dots move opposite to your face
 let LIGHT_DIR = 1; //       press L if the dots are right but the light still goes the wrong way
 let SWAP_HANDS = false; // if left/right come out backwards, set this to true (or press S)
 
