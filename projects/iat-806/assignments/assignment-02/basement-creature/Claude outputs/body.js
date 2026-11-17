@@ -11,6 +11,13 @@ let faces = [];
 let hands = [];
 
 let MOUSE_MODE = false;
+
+// MIRRORING
+// The video is drawn mirrored (like a real mirror). The face/hand points must be
+// mirrored the same way, or they move opposite to you. We do that ourselves
+// (instead of ml5's "flipped" option) so it's one clear switch:
+let MIRROR_POINTS = true; // press F if the face dots move opposite to your face
+let LIGHT_DIR = 1; //       press L if the dots are right but the light still goes the wrong way
 let SWAP_HANDS = false; // if left/right come out backwards, set this to true (or press S)
 
 // what the game reads every frame
@@ -42,7 +49,7 @@ const LOST_GRACE = 15; // ~0.25 s
 // gesture holding
 let gestureNow = "none";
 let gestureFrames = 0;
-const GESTURE_HOLD = 45; // ~0.75 s to confirm a sign
+const GESTURE_HOLD = 15; // quick confirmation while debugging; raise later // ~0.75 s to confirm a sign
 
 // how strongly head turning moves the light
 const GAIN_X = 2.6;
@@ -53,46 +60,102 @@ let bodyStatus = {
   ml5: false, // did the ml5 library load?
   camera: false, // is the webcam giving pictures?
   detecting: false, // have we started faceMesh + handPose?
+  handResults: 0, // number of HandPose callbacks received
   faceResults: 0, // how many times faceMesh has answered
   eyeRatio: 0, // your current eye-open number
   error: "",
+  faceReady: false, // FaceMesh model finished downloading
+  handReady: false, // HandPose model finished downloading
+  faceDetecting: false,
+  handDetecting: false,
+  faceError: "",
+  handError: "",
 };
 
-function preloadBody() {
-  if (typeof ml5 === "undefined") {
-    bodyStatus.error = "ml5 didn't load (check internet / the script tag)";
-    return;
-  }
-  bodyStatus.ml5 = true;
-  faceMesh = ml5.faceMesh({ maxFaces: 1, flipped: true, refineLandmarks: false });
-  handPose = ml5.handPose({ maxHands: 2, flipped: true });
-}
+// HOW ml5 LOADS (checked in the ml5 1.x source code):
+//   ml5.faceMesh() returns the model object RIGHT AWAY, but the model itself
+//   downloads in the background. Its .ready promise tells you when it's done.
+//   detectStart() does NOT wait for that: if you call it too early it crashes
+//   quietly inside ml5 and never tries again. So we wait for .ready first.
 
+// Nothing to do in preload: if a model loaded there failed to download,
+// p5 would wait forever and the game would never start.
+function preloadBody() {}
+
+// Create both models in setup. They download in the background while the
+// rooms are drawn; detection starts by itself once they're ready.
 function setupBody() {
   if (location.protocol === "file:") {
     bodyStatus.error =
-      "Opened as a file. Use VS Code Live Server (or GitHub Pages) so the camera + pictures work.";
+      "Open this project via Live Server (http://localhost), not file://";
   }
-  if (!bodyStatus.ml5 || !faceMesh || !handPose) {
-    MOUSE_MODE = true; // ml5 didn't load: play with the mouse
+  if (typeof ml5 === "undefined") {
+    bodyStatus.error = "ml5 library unavailable: check the <script> tag / network";
+    MOUSE_MODE = true; // no ml5: play with the mouse
     return;
   }
-  // don't start yet: we wait until the camera really gives pictures (see startDetectionWhenReady)
+  bodyStatus.ml5 = true;
+  // flipped: false → the models give raw camera points; mirrorPoints() flips them
+  faceMesh = ml5.faceMesh({ maxFaces: 1, refineLandmarks: false, flipped: false });
+  handPose = ml5.handPose({ maxHands: 2, flipped: false });
+
+  // mark each model as ready only when it has REALLY finished loading
+  faceMesh.ready
+    .then(() => {
+      bodyStatus.faceReady = true;
+      console.log("FaceMesh model loaded");
+    })
+    .catch((err) => {
+      bodyStatus.faceError = String((err && err.message) || err);
+      console.error("FaceMesh model error:", err);
+    });
+  handPose.ready
+    .then(() => {
+      bodyStatus.handReady = true;
+      console.log("HandPose model loaded");
+    })
+    .catch((err) => {
+      bodyStatus.handError = String((err && err.message) || err);
+      console.error("HandPose model error:", err);
+    });
 }
 
-// faceMesh fails silently if it starts before the webcam is ready,
-// so we check every frame and start it once the video has real pictures
+// Called every frame. Starts each model's detection once BOTH
+// the camera is giving pictures AND that model has finished loading.
 function startDetectionWhenReady() {
-  if (bodyStatus.detecting || MOUSE_MODE || !faceMesh) return;
-  let el = video && video.elt;
-  if (!el || el.readyState < 2 || el.videoWidth === 0) return; // camera not ready yet
+  if (MOUSE_MODE || !video || !video.elt) return;
+  const el = video.elt;
+  if (el.readyState < 2 || el.videoWidth === 0) return; // camera not ready yet
   bodyStatus.camera = true;
-  bodyStatus.detecting = true;
-  faceMesh.detectStart(video, (results) => {
-    faces = results;
-    bodyStatus.faceResults++;
-  });
-  handPose.detectStart(video, (results) => (hands = results));
+
+  if (bodyStatus.faceReady && !bodyStatus.faceDetecting) {
+    bodyStatus.faceDetecting = true;
+    faceMesh.detectStart(video, (results) => {
+      faces = mirrorPoints(results || []);
+      bodyStatus.faceResults++;
+    });
+    console.log("FaceMesh detection started");
+  }
+
+  if (bodyStatus.handReady && !bodyStatus.handDetecting) {
+    bodyStatus.handDetecting = true;
+    handPose.detectStart(video, (results) => {
+      hands = mirrorPoints(results || []);
+      bodyStatus.handResults++;
+    });
+    console.log("HandPose detection started");
+  }
+  bodyStatus.detecting = bodyStatus.faceDetecting || bodyStatus.handDetecting;
+}
+
+// mirror every keypoint left↔right so it lines up with the mirrored video
+function mirrorPoints(results) {
+  if (!MIRROR_POINTS) return results;
+  let w = video.width; // the size the points are measured in (640)
+  for (let r of results) {
+    for (let p of r.keypoints) p.x = w - p.x;
+  }
+  return results;
 }
 
 //////////////////// FACE //////////////////////
@@ -127,13 +190,40 @@ function headTurn(face) {
   };
 }
 
-// are the eyes open right now? (raw, one frame — may be noisy)
-// Uses two thresholds so it doesn't flicker when the eyes are half-closed:
-// once open, they must drop below 0.5 to count as closed;
-// once closed, they must rise above 0.65 to count as open again.
+// EYE TUNING
+// faceMesh never fully closes the eyelid points: open eyes are ~0.25–0.35,
+// closed eyes are often ~0.12–0.2 (not 0). So instead of a fixed number we
+// compare against YOUR open-eye size: closed = it dropped by about 30%.
+const CLOSE_AT = 0.7; // closed when below 70% of your open size
+const OPEN_AT = 0.8; //  open again when above 80% (gap = no flicker)
+let eyeSamples = []; // first readings, used to learn your open-eye size
+
+// are the eyes open right now? (one frame)
 function eyesLookOpen(size) {
-  let limit = eyesOpen ? 0.5 : 0.65;
+  let limit = eyesOpen ? CLOSE_AT : OPEN_AT;
   return size > openEyeSize * limit;
+}
+
+// learn your open-eye size:
+//  - first ~1.5 s with a face: take the typical (median) value
+//  - after that: adjust slowly, ONLY from frames where the eyes are open,
+//    and ignore odd spikes (head turned, bad frame)
+function learnOpenEyes(size) {
+  if (eyeSamples.length < 90) {
+    eyeSamples.push(size);
+    let sorted = [...eyeSamples].sort((a, b) => a - b);
+    openEyeSize = sorted[floor(sorted.length * 0.6)];
+    return;
+  }
+  let open = size > openEyeSize * OPEN_AT;
+  let spike = size > openEyeSize * 1.5;
+  if (open && !spike) openEyeSize = lerp(openEyeSize, size, 0.01);
+}
+
+// press C (or call this) to learn your eyes again, e.g. after moving the laptop
+function recalibrateEyes() {
+  eyeSamples = [];
+  eyesOpen = true;
 }
 
 // call every frame. calibrate = true on the start screen (look straight ahead)
@@ -154,7 +244,9 @@ function updateBody(calibrate) {
     let face = faces[0];
     let k = face.keypoints;
     let turn = headTurn(face);
-    let size = (eyeSize(face, L_EYE) + eyeSize(face, R_EYE)) / 2;
+    // use the MORE open eye: both eyes must close to count as closed,
+    // so one badly-tracked eye (hair, glasses, head turned) can't fake a blink
+    let size = max(eyeSize(face, L_EYE), eyeSize(face, R_EYE));
 
     bodyStatus.eyeRatio = size;
 
@@ -162,13 +254,10 @@ function updateBody(calibrate) {
       neutralYaw = lerp(neutralYaw, turn.yaw, 0.1);
       neutralPitch = lerp(neutralPitch, turn.pitch, 0.1);
     }
-    // learn how big YOUR open eyes are: jump up quickly when the eyes are wider,
-    // sink down very slowly (so closing your eyes doesn't change it)
-    if (size > openEyeSize) openEyeSize = lerp(openEyeSize, size, 0.2);
-    else openEyeSize = lerp(openEyeSize, size, 0.002);
+    learnOpenEyes(size);
 
     // the headlamp: turn your head, the light moves
-    let tx = width / 2 + (turn.yaw - neutralYaw) * width * GAIN_X;
+    let tx = width / 2 + LIGHT_DIR * (turn.yaw - neutralYaw) * width * GAIN_X;
     let ty = height / 2 + (turn.pitch - neutralPitch) * height * GAIN_Y;
     lookX = lerp(lookX, constrain(tx, 0, width), 0.25); // smooth out camera noise
     lookY = lerp(lookY, constrain(ty, 0, height), 0.25);
@@ -178,7 +267,9 @@ function updateBody(calibrate) {
     headY = lerp(headY, k[NOSE].y, 0.3);
 
     // eyes: only change state after a few frames in a row
-    if (eyesLookOpen(size)) {
+    if (eyeSamples.length < 90) {
+      eyesOpen = true; // still learning your eyes
+    } else if (eyesLookOpen(size)) {
       openFrames++;
       closedFrames = 0;
       if (openFrames >= OPEN_CONFIRM) eyesOpen = true;
@@ -223,13 +314,14 @@ function isOpen(hand) {
 
 function whichHand(hand) {
   let side = hand.handedness; // "Left" or "Right"
+  if (side !== "Left" && side !== "Right") return "Unknown";
   if (SWAP_HANDS) side = side === "Left" ? "Right" : "Left";
   return side;
 }
 
 // ignore hands the model is unsure about (stops random signs from shadows)
 function goodHands() {
-  return hands.filter((h) => h.confidence === undefined || h.confidence > 0.7);
+  return hands.filter((h) => h && h.keypoints && h.keypoints.length >= 21);
 }
 
 // turn what the hands are doing into a sign name
@@ -250,6 +342,7 @@ function readGesture() {
   }
 
   let h = hs[0];
+  if (whichHand(h) === "Unknown") return "none";
   return whichHand(h) + (isOpen(h) ? "Open" : "Closed"); // e.g. "RightOpen"
 }
 
@@ -280,17 +373,75 @@ function drawBodyStatus(x, y) {
   noStroke();
   let lines = [];
   if (MOUSE_MODE) {
-    lines.push(["MOUSE MODE (press M to switch back to the camera)", color(255, 220, 120)]);
+    lines.push([
+      "MOUSE MODE (press M to switch back to the camera)",
+      color(255, 220, 120),
+    ]);
   } else {
-    lines.push([(bodyStatus.ml5 ? "✓" : "✗") + " ml5 loaded", bodyStatus.ml5 ? color(120, 220, 120) : color(255, 90, 90)]);
-    lines.push([(bodyStatus.camera ? "✓" : "…") + " camera " + (bodyStatus.camera ? "on" : "waiting (allow camera access?)"), bodyStatus.camera ? color(120, 220, 120) : color(255, 200, 90)]);
+    lines.push([
+      (bodyStatus.ml5 ? "✓" : "✗") + " ml5 loaded",
+      bodyStatus.ml5 ? color(120, 220, 120) : color(255, 90, 90),
+    ]);
+    lines.push([
+      (bodyStatus.camera ? "✓" : "…") +
+        " camera " +
+        (bodyStatus.camera ? "on" : "waiting (allow camera access?)"),
+      bodyStatus.camera ? color(120, 220, 120) : color(255, 200, 90),
+    ]);
     let modelOk = bodyStatus.faceResults > 0;
-    lines.push([(modelOk ? "✓" : "…") + " face model " + (modelOk ? "running" : "loading…"), modelOk ? color(120, 220, 120) : color(255, 200, 90)]);
-    lines.push([(faces.length > 0 ? "✓ face found" : "✗ no face — face the camera, add light"), faces.length > 0 ? color(120, 220, 120) : color(255, 90, 90)]);
+    lines.push([
+      (modelOk ? "✓" : "…") +
+        " face model " +
+        (modelOk ? "running" : "loading…"),
+      modelOk ? color(120, 220, 120) : color(255, 200, 90),
+    ]);
+    lines.push([
+      faces.length > 0
+        ? "✓ face found"
+        : "✗ no face — face the camera, add light",
+      faces.length > 0 ? color(120, 220, 120) : color(255, 90, 90),
+    ]);
     if (faces.length > 0) {
-      lines.push(["eyes: " + nf(bodyStatus.eyeRatio, 1, 2) + " (open ≈ " + nf(openEyeSize, 1, 2) + ") → " + (eyesOpen ? "OPEN" : "CLOSED"), color(200)]);
+      lines.push([
+        "eyes: " +
+          nf(bodyStatus.eyeRatio, 1, 2) +
+          "  open ≈ " +
+          nf(openEyeSize, 1, 2) +
+          "  closed below " +
+          nf(openEyeSize * CLOSE_AT, 1, 2) +
+          " → " +
+          (eyeSamples.length < 90 ? "learning… keep eyes open" : eyesOpen ? "OPEN" : "CLOSED") +
+          "   (C = relearn)",
+        color(200),
+      ]);
     }
   }
+  lines.push([
+    "mirror dots: " + (MIRROR_POINTS ? "on" : "off") + " (F)   light: " +
+      (LIGHT_DIR > 0 ? "normal" : "reversed") + " (L)   hands swapped: " +
+      (SWAP_HANDS ? "yes" : "no") + " (S)",
+    color(160, 200, 255),
+  ]);
+  lines.push([
+    "FaceMesh model: " +
+      (bodyStatus.faceReady ? "ready" : "waiting") +
+      " | HandPose model: " +
+      (bodyStatus.handReady ? "ready" : "waiting"),
+    color(255, 220, 120),
+  ]);
+  if (bodyStatus.faceError)
+    lines.push(["Face error: " + bodyStatus.faceError, color(255, 100, 100)]);
+  if (bodyStatus.handError)
+    lines.push(["Hand error: " + bodyStatus.handError, color(255, 100, 100)]);
+  lines.push([
+    "Hands: " +
+      hands.length +
+      " | gesture: " +
+      readGesture() +
+      " | hand callbacks: " +
+      bodyStatus.handResults,
+    color(255, 220, 120),
+  ]);
   if (bodyStatus.error) lines.push([bodyStatus.error, color(255, 90, 90)]);
   for (let i = 0; i < lines.length; i++) {
     fill(lines[i][1]);

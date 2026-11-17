@@ -38,6 +38,7 @@ let penalty = 0; // seconds lost when a creature gets you
 let timeLeft = TOTAL_TIME;
 
 let closedEyesFrames = 0; // on the start screen: close your eyes to enter
+let closedSince = -1; // millis() when the eyes closed on the start screen (-1 = open)
 let roomTitleTimer = 0;
 let hurtFlash = 0;
 let scareImg = null;
@@ -81,13 +82,12 @@ function preload() {
 function setup() {
   let cnv = createCanvas(640, 480);
   if (select("#sketch-holder")) cnv.parent("sketch-holder"); // show the game inside the page
-  video = createCapture(VIDEO); // use unmirrored video and model coordinates for debugging
+  video = createCapture(VIDEO, { flipped: true }); // mirrored, like a real mirror (matches flipped: true in body.js)
   video.size(640, 480);
   video.hide();
   textFont("monospace");
 
-  // Start loading ml5 early, before the more expensive room drawing.
-  setupBody(); // async: FaceMesh and HandPose initialize independently
+  setupBody(); // checks ml5 loaded; detection starts by itself once camera + models are ready
   setupRooms(); // all six rooms, from rooms.js
   hallway = roomForSign("bothClosed");
   currentRoom = hallway;
@@ -314,8 +314,12 @@ function drawStart() {
       width / 2,
       350,
     );
-    if (!eyesOpen) closedEyesFrames++;
-    else closedEyesFrames = 0;
+    // count real time, not frames: with two ml5 models running the frame rate
+    // can drop to ~15 fps, and 120 frames would then take 8 seconds
+    if (!eyesOpen) {
+      if (closedSince < 0) closedSince = millis();
+    } else closedSince = -1;
+    let closedFor = closedSince < 0 ? 0 : millis() - closedSince;
     noFill();
     stroke(200, 0, 0);
     strokeWeight(4);
@@ -325,9 +329,9 @@ function drawStart() {
       40,
       40,
       -HALF_PI,
-      -HALF_PI + TWO_PI * min(1, closedEyesFrames / 120),
+      -HALF_PI + TWO_PI * min(1, closedFor / 2000),
     );
-    if (closedEyesFrames >= 120) startGame();
+    if (closedFor >= 2000) startGame();
   }
   drawBodyStatus(12, 390); // what the camera / face model is doing
 
@@ -335,7 +339,7 @@ function drawStart() {
   fill(120);
   textSize(11);
   text(
-    "(testing without a camera? press M for mouse mode, then click)",
+    "(no camera? press M for mouse mode · ENTER skips the eye test)",
     width / 2,
     465,
   );
@@ -351,6 +355,7 @@ function startGame() {
   penalty = 0;
   startTime = millis();
   closedEyesFrames = 0;
+  closedSince = -1;
   scareTimer = 0;
   hurtFlash = 0;
   roomTitleTimer = 90;
@@ -676,6 +681,9 @@ function keyPressed() {
   }
   if (key === "m" || key === "M") MOUSE_MODE = !MOUSE_MODE;
   if (key === "s" || key === "S") SWAP_HANDS = !SWAP_HANDS;
+  if (key === "c" || key === "C") recalibrateEyes();
+  if (key === "f" || key === "F") MIRROR_POINTS = !MIRROR_POINTS;
+  if (key === "l" || key === "L") LIGHT_DIR = -LIGHT_DIR;
   if (key === "d" || key === "D") SHOW_ML5_DEBUG = !SHOW_ML5_DEBUG;
   if (
     (key === "r" || key === "R") &&
