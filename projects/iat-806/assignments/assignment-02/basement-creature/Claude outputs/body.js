@@ -48,18 +48,50 @@ const GESTURE_HOLD = 45; // ~0.75 s to confirm a sign
 const GAIN_X = 2.6;
 const GAIN_Y = 3.2;
 
+// status, shown on the start screen so you can see what's working
+let bodyStatus = {
+  ml5: false, // did the ml5 library load?
+  camera: false, // is the webcam giving pictures?
+  detecting: false, // have we started faceMesh + handPose?
+  faceResults: 0, // how many times faceMesh has answered
+  eyeRatio: 0, // your current eye-open number
+  error: "",
+};
+
 function preloadBody() {
-  if (typeof ml5 === "undefined") return;
-  faceMesh = ml5.faceMesh({ maxFaces: 1, flipped: true });
+  if (typeof ml5 === "undefined") {
+    bodyStatus.error = "ml5 didn't load (check internet / the script tag)";
+    return;
+  }
+  bodyStatus.ml5 = true;
+  faceMesh = ml5.faceMesh({ maxFaces: 1, flipped: true, refineLandmarks: false });
   handPose = ml5.handPose({ maxHands: 2, flipped: true });
 }
 
 function setupBody() {
-  if (typeof ml5 === "undefined" || !faceMesh || !handPose) {
+  if (location.protocol === "file:") {
+    bodyStatus.error =
+      "Opened as a file. Use VS Code Live Server (or GitHub Pages) so the camera + pictures work.";
+  }
+  if (!bodyStatus.ml5 || !faceMesh || !handPose) {
     MOUSE_MODE = true; // ml5 didn't load: play with the mouse
     return;
   }
-  faceMesh.detectStart(video, (results) => (faces = results));
+  // don't start yet: we wait until the camera really gives pictures (see startDetectionWhenReady)
+}
+
+// faceMesh fails silently if it starts before the webcam is ready,
+// so we check every frame and start it once the video has real pictures
+function startDetectionWhenReady() {
+  if (bodyStatus.detecting || MOUSE_MODE || !faceMesh) return;
+  let el = video && video.elt;
+  if (!el || el.readyState < 2 || el.videoWidth === 0) return; // camera not ready yet
+  bodyStatus.camera = true;
+  bodyStatus.detecting = true;
+  faceMesh.detectStart(video, (results) => {
+    faces = results;
+    bodyStatus.faceResults++;
+  });
   handPose.detectStart(video, (results) => (hands = results));
 }
 
@@ -106,6 +138,7 @@ function eyesLookOpen(size) {
 
 // call every frame. calibrate = true on the start screen (look straight ahead)
 function updateBody(calibrate) {
+  startDetectionWhenReady();
   let wasOpen = eyesOpen;
 
   if (MOUSE_MODE) {
@@ -123,11 +156,16 @@ function updateBody(calibrate) {
     let turn = headTurn(face);
     let size = (eyeSize(face, L_EYE) + eyeSize(face, R_EYE)) / 2;
 
+    bodyStatus.eyeRatio = size;
+
     if (calibrate) {
       neutralYaw = lerp(neutralYaw, turn.yaw, 0.1);
       neutralPitch = lerp(neutralPitch, turn.pitch, 0.1);
-      if (size > openEyeSize * 0.7) openEyeSize = lerp(openEyeSize, size, 0.1);
     }
+    // learn how big YOUR open eyes are: jump up quickly when the eyes are wider,
+    // sink down very slowly (so closing your eyes doesn't change it)
+    if (size > openEyeSize) openEyeSize = lerp(openEyeSize, size, 0.2);
+    else openEyeSize = lerp(openEyeSize, size, 0.002);
 
     // the headlamp: turn your head, the light moves
     let tx = width / 2 + (turn.yaw - neutralYaw) * width * GAIN_X;
@@ -232,6 +270,33 @@ function confirmedGesture() {
 
 function gestureProgress() {
   return gestureNow === "none" ? 0 : min(1, gestureFrames / GESTURE_HOLD);
+}
+
+// small status lines for the start screen: tells you which step is failing
+function drawBodyStatus(x, y) {
+  push();
+  textAlign(LEFT, TOP);
+  textSize(11);
+  noStroke();
+  let lines = [];
+  if (MOUSE_MODE) {
+    lines.push(["MOUSE MODE (press M to switch back to the camera)", color(255, 220, 120)]);
+  } else {
+    lines.push([(bodyStatus.ml5 ? "✓" : "✗") + " ml5 loaded", bodyStatus.ml5 ? color(120, 220, 120) : color(255, 90, 90)]);
+    lines.push([(bodyStatus.camera ? "✓" : "…") + " camera " + (bodyStatus.camera ? "on" : "waiting (allow camera access?)"), bodyStatus.camera ? color(120, 220, 120) : color(255, 200, 90)]);
+    let modelOk = bodyStatus.faceResults > 0;
+    lines.push([(modelOk ? "✓" : "…") + " face model " + (modelOk ? "running" : "loading…"), modelOk ? color(120, 220, 120) : color(255, 200, 90)]);
+    lines.push([(faces.length > 0 ? "✓ face found" : "✗ no face — face the camera, add light"), faces.length > 0 ? color(120, 220, 120) : color(255, 90, 90)]);
+    if (faces.length > 0) {
+      lines.push(["eyes: " + nf(bodyStatus.eyeRatio, 1, 2) + " (open ≈ " + nf(openEyeSize, 1, 2) + ") → " + (eyesOpen ? "OPEN" : "CLOSED"), color(200)]);
+    }
+  }
+  if (bodyStatus.error) lines.push([bodyStatus.error, color(255, 90, 90)]);
+  for (let i = 0; i < lines.length; i++) {
+    fill(lines[i][1]);
+    text(lines[i][0], x, y + i * 14);
+  }
+  pop();
 }
 
 // keyboard shortcuts (always on — handy when testing or demoing)

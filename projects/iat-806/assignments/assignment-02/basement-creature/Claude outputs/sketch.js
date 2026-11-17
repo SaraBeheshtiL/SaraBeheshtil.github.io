@@ -79,7 +79,8 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(640, 480);
+  let cnv = createCanvas(640, 480);
+  if (select("#sketch-holder")) cnv.parent("sketch-holder"); // show the game inside the page
   video = createCapture(VIDEO, { flipped: true });
   video.size(640, 480);
   video.hide();
@@ -282,7 +283,11 @@ function drawStart() {
     width / 2,
     206,
   );
-  text("Escape all 5 rooms and get back to the hallway in 2:00.", width / 2, 228);
+  text(
+    "Escape all 5 rooms and get back to the hallway in 2:00.",
+    width / 2,
+    228,
+  );
 
   textSize(13);
   fill(170);
@@ -300,12 +305,12 @@ function drawStart() {
   fill(255);
   textSize(16);
   if (!faceFound) {
-    text("Look at the camera…", width / 2, 380);
+    text("Look at the camera…", width / 2, 350);
   } else {
     text(
       "Look straight ahead. Close your eyes for 2 seconds to enter.",
       width / 2,
-      380,
+      350,
     );
     if (!eyesOpen) closedEyesFrames++;
     else closedEyesFrames = 0;
@@ -313,8 +318,8 @@ function drawStart() {
     stroke(200, 0, 0);
     strokeWeight(4);
     arc(
-      width / 2,
-      425,
+      width - 60,
+      395,
       40,
       40,
       -HALF_PI,
@@ -322,6 +327,8 @@ function drawStart() {
     );
     if (closedEyesFrames >= 120) startGame();
   }
+  drawBodyStatus(12, 390); // what the camera / face model is doing
+
   noStroke();
   fill(120);
   textSize(11);
@@ -490,7 +497,11 @@ function drawHUD() {
   textSize(13);
   if (allEscaped() && !currentRoom.isHallway) {
     fill(255, 220, 120);
-    text("All rooms escaped! BOTH FISTS to get back to the hallway.", width / 2, height - 12);
+    text(
+      "All rooms escaped! BOTH FISTS to get back to the hallway.",
+      width / 2,
+      height - 12,
+    );
   } else if (currentRoom.escaped) {
     fill(230, 200, 120);
     text(
