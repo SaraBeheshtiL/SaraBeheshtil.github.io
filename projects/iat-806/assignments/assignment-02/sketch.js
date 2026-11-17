@@ -163,7 +163,6 @@ function playFrame() {
   drawJumpScare();
   //drawGrain();
   drawHUD();
-  drawML5Debug();
 }
 
 function updateRoom(lightOn, radius) {
@@ -308,7 +307,7 @@ function drawStart() {
     stroke(200, 0, 0);
     strokeWeight(4);
     arc(
-      width - 60,
+      width / 2,
       395,
       40,
       40,
@@ -317,16 +316,6 @@ function drawStart() {
     );
     if (closedFor >= 2000) startGame();
   }
-  drawBodyStatus(12, 390); // what the camera / face model is doing
-
-  noStroke();
-  fill(120);
-  textSize(11);
-  text(
-    "(no camera? press M for mouse mode · ENTER skips the eye test)",
-    width / 2,
-    465,
-  );
 }
 
 function startGame() {
@@ -553,15 +542,6 @@ function drawHUD() {
       break;
     }
   }
-
-  // HandPose diagnostics during play, including before a gesture is confirmed.
-  push();
-  noStroke();
-  fill(255, 230, 160);
-  textAlign(LEFT, TOP);
-  textSize(12);
-  text("Hands: " + hands.length + " | " + readGesture(), 12, height - 42);
-  pop();
 
   // small camera preview so you can see your hands
   push();
