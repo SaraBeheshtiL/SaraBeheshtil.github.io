@@ -16,23 +16,23 @@
 // the back wall: a rectangle in the middle of the screen for the hallway.
 let BackWall = { x1: 240, y1: 150, x2: 400, y2: 265 };
 
-let currentRoom = 0;
+// let currentRoom = 0;
 
-function setup() {
-  createCanvas(640, 480);
-  setupRooms();
-}
+// function setup() {
+//   createCanvas(640, 480);
+//   setupRooms();
+// }
 
-function draw() {
-  background(0);
-  rooms[currentRoom].display();
-}
+// function draw() {
+//   background(0);
+//   rooms[currentRoom].display();
+// }
 
-function keyPressed() {
-  if (key >= "1" && key <= "6") {
-    currentRoom = Number(key) - 1;
-  }
-}
+// function keyPressed() {
+//   if (key >= "1" && key <= "6") {
+//     currentRoom = Number(key) - 1;
+//   }
+// }
 
 // When I want to find a point on the left or right wall
 function wallPoint(side, t, h) {
@@ -311,10 +311,10 @@ function setupRooms() {
         x: floorPoint(0.75, 0.22).x,
         y: floorPoint(0.75, 0.22).y - wallHeightAt(0.22) * 0.04,
         s: 0.28,
-        lightRadius: 125,
       },
       end: { x: width * 0.55, y: height * 0.68, s: 2.4 },
       ghostFile: "ghost1.png",
+      lightRadius: 125,
     },
     {
       name: "Kitchen",
@@ -951,6 +951,7 @@ function drawKitchen(hCanvas) {
   hCanvas.strokeWeight(8);
   hCanvas.line(370, 345, 370, 445);
   hCanvas.line(370, 525, 370, 635);
+  hCanvas.pop();
 }
 
 /////////////////////////////////////////////////////
@@ -1232,36 +1233,6 @@ function drawLivingRoom(hCanvas) {
 
   hCanvas.quad(230, 420, 260, 360, 260, 410, 230, 500);
 
-  // /////// STANDING FLOOR LAMP ///////
-
-  // // Warm glow behind the lamp
-  // hCanvas.noStroke();
-  // hCanvas.fill(220, 145, 70, 17);
-  // hCanvas.ellipse(520, 285, 200, 235);
-
-  // // Lamp base
-  // hCanvas.fill(45, 39, 32);
-  // hCanvas.ellipse(520, 426, 42, 10);
-
-  // // Pole
-  // hCanvas.stroke(105, 87, 62);
-  // hCanvas.strokeWeight(5);
-  // hCanvas.line(520, 420, 520, 275);
-  // hCanvas.noStroke();
-
-  // // Shade
-  // hCanvas.fill(185, 139, 88);
-  // hCanvas.quad(
-  //   502, 250,
-  //   538, 250,
-  //   552, 290,
-  //   488, 290
-  // );
-
-  // // Bright underside
-  // hCanvas.fill(226, 172, 106, 130);
-  // hCanvas.ellipse(520, 290, 64, 10);
-
   /////// PLANT NEAR THE CORNER ///////
 
   // Pot
@@ -1315,6 +1286,7 @@ function drawLivingRoom(hCanvas) {
   hCanvas.ellipse(510, 450, 65, 20);
   hCanvas.fill(22, 22, 20);
   hCanvas.ellipse(510, 450, 43, 8);
+  hCanvas.pop();
 }
 
 /////////////////////////////////////////////////////////////////

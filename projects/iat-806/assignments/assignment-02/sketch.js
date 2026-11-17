@@ -48,24 +48,26 @@ let caughtTimer = 0;
 // Every creature has 8 pictures, one for each step it takes toward you.
 // They live in the "creatures" folder, named like: creatures/bedroom_1.png … creatures/bedroom_8.png
 // If a room's pictures are missing, its creature is a simple drawn face.
-let creatureNames = [
-  "hallway",
-  "bedroom",
-  "kitchen",
-  "bathroom",
-  "livingroom",
-  "basement",
-];
+const CREATURE_FILES = {
+  hallway: "hallway-creature/ghost_",
+  bedroom: "bedroom-creature/underbed_",
+  kitchen: "kitchen-creature/kitchen_creature_",
+  bathroom: "bathroom-creature/possessed_",
+  livingroom: "livingroom-creature/living_room_creature_",
+  basement: "basement-creature/creature_",
+};
+// inside the loop:
+let file = CREATURE_FILES[name] + i + ".png";
 const FRAMES = 8;
 let rawFrames = {}; // the pictures as loaded
 let creatureFrames = {}; // the same pictures made grey and creepy
 let grainFrames = [];
 
 function preload() {
-  for (let name of creatureNames) {
+  for (let name of Object.keys(CREATURE_FILES)) {
     rawFrames[name] = [];
     for (let i = 0; i < FRAMES; i++) {
-      let file = "creatures/" + name + "_" + (i + 1) + ".png";
+      let file = CREATURE_FILES[name] + i + ".png";
       // store each picture in its own place (i), so the order stays right
       loadImage(
         file,
@@ -90,7 +92,7 @@ function setup() {
   setupBody(); // start faceMesh + handPose
 
   // make every picture grey and creepy (skip any that didn't load)
-  for (let name of creatureNames) {
+  for (let name of Object.keys(CREATURE_FILES)) {
     creatureFrames[name] = [];
     for (let img of rawFrames[name]) {
       if (img) creatureFrames[name].push(prepareGhost(img));
