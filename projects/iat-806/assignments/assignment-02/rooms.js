@@ -412,8 +412,8 @@ function setupRooms() {
       signText: "right hand OPEN",
       creator: drawBedroom,
       appearance: {
-        x: floorPoint(0.75, 0.22).x,
-        y: floorPoint(0.75, 0.22).y - wallHeightAt(0.22) * 0.04,
+        x: 450,
+        y: 330,
         s: 0.28,
       },
       end: { x: width * 0.55, y: height * 0.68, s: 2.4 },
