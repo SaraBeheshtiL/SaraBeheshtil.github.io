@@ -10,7 +10,7 @@ let faceMesh, handPose;
 let faces = [];
 let hands = [];
 
-let MOUSE_MODE = false; // to experiment with mouse instead of the camera (press M to toggle)
+let MOUSE_MODE = false;
 let SWAP_HANDS = false; // if left/right come out backwards, set this to true (or press S)
 
 // what the game reads every frame
@@ -57,50 +57,108 @@ let bodyStatus = {
   faceResults: 0, // how many times faceMesh has answered
   eyeRatio: 0, // your current eye-open number
   error: "",
+  modelsReady: false,
 };
 
+// Initialize FaceMesh and HandPose independently, after p5 setup begins.
+// In p5 1.x the ml5 documentation also supports loading models in preload().
+// This approach keeps a failure in one model from disabling the other.
 function preloadBody() {
+  // Nothing to initialize while images are preloading.
+}
+
+async function setupBody() {
+  if (location.protocol === "file:") {
+    bodyStatus.error =
+      "Open this project via Live Server (http://localhost), not file://";
+    return;
+  }
   if (typeof ml5 === "undefined") {
-    bodyStatus.error = "ml5 didn't load (check internet / the script tag)";
+    bodyStatus.error = "ml5 library unavailable: check CDN/network requests";
     return;
   }
   bodyStatus.ml5 = true;
-  faceMesh = ml5.faceMesh({
-    maxFaces: 1,
-    flipped: true,
-    refineLandmarks: false,
-  });
-  handPose = ml5.handPose({ maxHands: 2, flipped: true });
-}
+  bodyStatus.faceReady = false;
+  bodyStatus.handReady = false;
+  bodyStatus.faceDetecting = false;
+  bodyStatus.handDetecting = false;
+  bodyStatus.faceError = "";
+  bodyStatus.handError = "";
+  console.log("ml5 library loaded", ml5.version || "");
 
-function setupBody() {
-  if (location.protocol === "file:") {
+  // Launch BOTH loads immediately instead of waiting for FaceMesh to finish.
+  const faceTask = (async () => {
+    try {
+      faceMesh = await ml5.faceMesh({
+        maxFaces: 1,
+        refineLandmarks: false,
+        flipHorizontal: false,
+      });
+      bodyStatus.faceReady = true;
+      console.log("FaceMesh model loaded");
+    } catch (err) {
+      bodyStatus.faceError = String(err.message || err);
+      console.error("FaceMesh model error:", err);
+    }
+  })();
+
+  const handTask = (async () => {
+    try {
+      handPose = await ml5.handPose({ maxHands: 2, flipHorizontal: false });
+      bodyStatus.handReady = true;
+      console.log("HandPose model loaded");
+    } catch (err) {
+      bodyStatus.handError = String(err.message || err);
+      console.error("HandPose model error:", err);
+    }
+  })();
+
+  await Promise.all([faceTask, handTask]);
+  bodyStatus.modelsReady = bodyStatus.faceReady && bodyStatus.handReady;
+  if (!bodyStatus.modelsReady) {
     bodyStatus.error =
-      "Opened as a file. Use VS Code Live Server (or GitHub Pages) so the camera + pictures work.";
+      "Model error: " +
+      [bodyStatus.faceError, bodyStatus.handError].filter(Boolean).join(" / ");
   }
-  if (!bodyStatus.ml5 || !faceMesh || !handPose) {
-    MOUSE_MODE = true; // ml5 didn't load: play with the mouse
-    return;
-  }
-  // don't start yet: we wait until the camera really gives pictures (see startDetectionWhenReady)
 }
 
-// faceMesh fails silently if it starts before the webcam is ready,
-// so we check every frame and start it once the video has real pictures
+// Called once per draw() to launch detection as each model becomes available.
 function startDetectionWhenReady() {
-  if (bodyStatus.detecting || MOUSE_MODE || !faceMesh) return;
-  let el = video && video.elt;
-  if (!el || el.readyState < 2 || el.videoWidth === 0) return; // camera not ready yet
+  if (MOUSE_MODE || !video || !video.elt) return;
+  const el = video.elt;
+  if (el.readyState < 2 || el.videoWidth === 0) return;
   bodyStatus.camera = true;
-  bodyStatus.detecting = true;
-  faceMesh.detectStart(video, (results) => {
-    faces = results;
-    bodyStatus.faceResults++;
-  });
-  handPose.detectStart(video, (results) => {
-    hands = results || [];
-    bodyStatus.handResults++;
-  });
+
+  if (bodyStatus.faceReady && !bodyStatus.faceDetecting) {
+    bodyStatus.faceDetecting = true;
+    try {
+      faceMesh.detectStart(video, (results) => {
+        faces = results || [];
+        bodyStatus.faceResults++;
+      });
+      console.log("FaceMesh detection started");
+    } catch (err) {
+      bodyStatus.faceDetecting = false;
+      bodyStatus.faceError = String(err.message || err);
+      console.error("FaceMesh detectStart error:", err);
+    }
+  }
+
+  if (bodyStatus.handReady && !bodyStatus.handDetecting) {
+    bodyStatus.handDetecting = true;
+    try {
+      handPose.detectStart(video, (results) => {
+        hands = results || [];
+        bodyStatus.handResults++;
+      });
+      console.log("HandPose detection started");
+    } catch (err) {
+      bodyStatus.handDetecting = false;
+      bodyStatus.handError = String(err.message || err);
+      console.error("HandPose detectStart error:", err);
+    }
+  }
+  bodyStatus.detecting = bodyStatus.faceDetecting || bodyStatus.handDetecting;
 }
 
 //////////////////// FACE //////////////////////
@@ -231,13 +289,14 @@ function isOpen(hand) {
 
 function whichHand(hand) {
   let side = hand.handedness; // "Left" or "Right"
+  if (side !== "Left" && side !== "Right") return "Unknown";
   if (SWAP_HANDS) side = side === "Left" ? "Right" : "Left";
   return side;
 }
 
 // ignore hands the model is unsure about (stops random signs from shadows)
 function goodHands() {
-  return hands.filter((h) => h.confidence === undefined || h.confidence > 0.7);
+  return hands.filter((h) => h && h.keypoints && h.keypoints.length >= 21);
 }
 
 // turn what the hands are doing into a sign name
@@ -258,6 +317,7 @@ function readGesture() {
   }
 
   let h = hs[0];
+  if (whichHand(h) === "Unknown") return "none";
   return whichHand(h) + (isOpen(h) ? "Open" : "Closed"); // e.g. "RightOpen"
 }
 
@@ -328,6 +388,17 @@ function drawBodyStatus(x, y) {
       ]);
     }
   }
+  lines.push([
+    "FaceMesh model: " +
+      (bodyStatus.faceReady ? "ready" : "waiting") +
+      " | HandPose model: " +
+      (bodyStatus.handReady ? "ready" : "waiting"),
+    color(255, 220, 120),
+  ]);
+  if (bodyStatus.faceError)
+    lines.push(["Face error: " + bodyStatus.faceError, color(255, 100, 100)]);
+  if (bodyStatus.handError)
+    lines.push(["Hand error: " + bodyStatus.handError, color(255, 100, 100)]);
   lines.push([
     "Hands: " +
       hands.length +

@@ -27,32 +27,55 @@
 
       <p class="tagline"></p>
 
+      <p>This is the game senario:</p>
+      <p>//Game starts.</p>
       <p>
-        This is the game senario:  </p>
-        <p>//Game starts. </p> 
-        <p>// The camera catches the face of the player, and the light comes to the page (room) like there is a flashlight is on her forehead. So, the light should change the direction when the eyes of the player change direction. (It’s like that the player face is changing direction and moving toward spaces)</p>
-        <p> // Eyes open, the light is on // eyes closed the light is off// when the eyes move off the creature which the play faces/sees the creature gets one frame closer.</p>
-        <p>// So, when seeing a creature, the player should stare at it so that the creature doesn’t move.</p>
-        <p> Then we have the hand pose, which helps the player to change the rooms.</p>
-        <p>// Right hand (open) >>>> Bedroom</p>
-        <p>// Right hand (close) >>>> Kitchen</p>
-        <p>// Left hand (open) >>>> Bathroom</p>
-        <p>// Left hand (close) >>>> Living room</p>
-        <p>// Two hands open >>>> Basement</p>
-        <p>// Two hands close >>>> Back to the first frame, Hallway</p>
-        <p>// Bedroom: there is a creature under the bed </p>
-        <p>// Kitchen: there is a creature on the empty corner of the kitchen</p>
-        <p>// Bathroom: the player stands in front of the mirror, and the mirror shows the player’s face and the creature behind her.</p>
-        <p>// Living room: the creature is on top of the ceiling</p>
-        <p>// The basement: the play goes a few stairs down and see a creature crawling toward her from the basement.</p>
-        <p>// The player will survive when she escapes all these rooms and come back to the first frame if she does it in 2 mins. Otherwise in the last scene the creature catches her and she becomes a ghost.</p>
-        <a
-          href="https://github.com/SaraBeheshtiL/SaraBeheshtil.github.io/tree/main/projects/iat-806/assignments/assignment-02"
-          target="_blank"
-        >
-          GitHub
-        </a>
+        // The camera catches the face of the player, and the light comes to the
+        page (room) like there is a flashlight is on her forehead. So, the light
+        should change the direction when the eyes of the player change
+        direction. (It’s like that the player face is changing direction and
+        moving toward spaces)
       </p>
+      <p>
+        // Eyes open, the light is on // eyes closed the light is off// when the
+        eyes move off the creature which the play faces/sees the creature gets
+        one frame closer.
+      </p>
+      <p>
+        // So, when seeing a creature, the player should stare at it so that the
+        creature doesn’t move.
+      </p>
+      <p>
+        Then we have the hand pose, which helps the player to change the rooms.
+      </p>
+      <p>// Right hand (open) >>>> Bedroom</p>
+      <p>// Right hand (close) >>>> Kitchen</p>
+      <p>// Left hand (open) >>>> Bathroom</p>
+      <p>// Left hand (close) >>>> Living room</p>
+      <p>// Two hands open >>>> Basement</p>
+      <p>// Two hands close >>>> Back to the first frame, Hallway</p>
+      <p>// Bedroom: there is a creature under the bed</p>
+      <p>// Kitchen: there is a creature on the empty corner of the kitchen</p>
+      <p>
+        // Bathroom: the player stands in front of the mirror, and the mirror
+        shows the player’s face and the creature behind her.
+      </p>
+      <p>// Living room: the creature is on top of the ceiling</p>
+      <p>
+        // The basement: the play goes a few stairs down and see a creature
+        crawling toward her from the basement.
+      </p>
+      <p>
+        // The player will survive when she escapes all these rooms and come
+        back to the first frame if she does it in 2 mins. Otherwise in the last
+        scene the creature catches her and she becomes a ghost.
+      </p>
+      <a
+        href="https://github.com/SaraBeheshtiL/SaraBeheshtil.github.io/tree/main/projects/iat-806/assignments/assignment-02"
+        target="_blank"
+      >
+        GitHub
+      </a>
 
       <div id="sketch-holder"></div>
     </main>
@@ -61,8 +84,27 @@
       <p>Sara Beheshti</p>
     </footer>
 
+    <!-- p5.js -->
     <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"></script>
-    <script src="https://unpkg.com/ml5@1/dist/ml5.js"></script>
+
+    <!-- ml5.js: alternative CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/ml5@1/dist/ml5.min.js"></script>
+
+    <!-- Check whether ml5 loaded -->
+    <script>
+      console.log("p5:", typeof p5);
+      console.log("ml5:", typeof ml5);
+
+      if (typeof ml5 !== "undefined") {
+        console.log("ml5 version:", ml5.version);
+        console.log("FaceMesh:", typeof ml5.faceMesh);
+        console.log("HandPose:", typeof ml5.handPose);
+      } else {
+        console.error("ERROR: ml5 library did not load");
+      }
+    </script>
+
+    <!-- Your Haunted House files -->
     <script src="rooms.js"></script>
     <script src="creature.js"></script>
     <script src="body.js"></script>

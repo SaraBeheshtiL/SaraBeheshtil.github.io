@@ -81,15 +81,16 @@ function preload() {
 function setup() {
   let cnv = createCanvas(640, 480);
   if (select("#sketch-holder")) cnv.parent("sketch-holder"); // show the game inside the page
-  video = createCapture(VIDEO, { flipped: true });
+  video = createCapture(VIDEO); // use unmirrored video and model coordinates for debugging
   video.size(640, 480);
   video.hide();
   textFont("monospace");
 
+  // Start loading ml5 early, before the more expensive room drawing.
+  setupBody(); // async: FaceMesh and HandPose initialize independently
   setupRooms(); // all six rooms, from rooms.js
   hallway = roomForSign("bothClosed");
   currentRoom = hallway;
-  setupBody(); // start faceMesh + handPose
 
   // make every picture grey and creepy (skip any that didn't load)
   for (let name of creatureNames) {
@@ -699,8 +700,10 @@ function drawML5Debug() {
   textAlign(LEFT, TOP);
   textSize(12);
   text(
-    "ml5 ready: " +
-      !!bodyStatus.modelsReady +
+    "Face model: " +
+      !!bodyStatus.faceReady +
+      "   Hand model: " +
+      !!bodyStatus.handReady +
       "   camera: " +
       bodyStatus.camera +
       "   face callbacks: " +
@@ -724,9 +727,11 @@ function drawML5Debug() {
     16,
     height - 65,
   );
-  if (bodyStatus.error) {
+  let ml5Error =
+    bodyStatus.error || bodyStatus.faceError || bodyStatus.handError;
+  if (ml5Error) {
     fill(255, 120, 120);
-    text(bodyStatus.error, 16, height - 46);
+    text(String(ml5Error).slice(0, 92), 16, height - 46);
   }
   pop();
 }
