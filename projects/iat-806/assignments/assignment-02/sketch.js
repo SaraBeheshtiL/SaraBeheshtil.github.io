@@ -153,7 +153,6 @@ function playFrame() {
 
   // ---- things you can see in the dark ----
   for (let c of creatures) c.displayGlimpse();
-  updateDust(lightOn, radius);
 
   if (hurtFlash > 0) {
     noStroke();
@@ -162,7 +161,7 @@ function playFrame() {
     hurtFlash -= 8;
   }
   drawJumpScare();
-  drawGrain();
+  //drawGrain();
   drawHUD();
   drawML5Debug();
 }
@@ -189,22 +188,6 @@ function updateRoom(lightOn, radius) {
   }
 
   for (let c of creatures) c.display();
-}
-
-function updateDust(lightOn, radius) {
-  if (lightOn && random() < 0.6) {
-    dust.push(
-      new Dust(
-        lookX + random(-radius, radius) * 0.5,
-        lookY + random(-radius, radius) * 0.5,
-      ),
-    );
-  }
-  for (let i = dust.length - 1; i >= 0; i--) {
-    dust[i].update();
-    dust[i].display();
-    if (dust[i].isGone()) dust.splice(i, 1);
-  }
 }
 
 //////////////////// CHANGING ROOMS //////////////////////
