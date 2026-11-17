@@ -3,7 +3,7 @@
 //   While your headlamp is on her (eyes open, looking at her) → she FREEZES.
 //   Look away, or close your eyes → she gets one step closer.
 //   Every blink = one step closer, right away.
-//   When she has taken all her steps → she got you.
+//   When she reaches her last (closest) picture → she got you: game over.
 //
 // Each creature has 8 transparent pictures. In most rooms the pictures already
 // show her coming closer, so she is drawn in the same place every step.
@@ -83,8 +83,10 @@ class Creature {
     this.nextMove = frameCount + this.wait;
   }
 
+  // she has got you as soon as she reaches her LAST picture (the closest one).
+  // (looking at her then doesn't help any more: she's already in your face)
   caughtYou() {
-    return this.step >= this.totalSteps;
+    return this.step >= this.totalSteps - 1;
   }
 
   display(alpha = 255) {

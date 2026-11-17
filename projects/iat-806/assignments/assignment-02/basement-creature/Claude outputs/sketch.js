@@ -45,6 +45,10 @@ let scareImg = null;
 let scareTimer = 0;
 let caughtTimer = 0;
 
+// CREATURE SPEED (frames between her steps when you look away; ~30–60 frames = 1 second)
+const CREATURE_WAIT = 25; // at the start of the game (it was 55)
+const CREATURE_WAIT_MIN = 10; // the fastest she can ever get (it was 22)
+
 // ---------- creature pictures ----------
 // Every creature has 8 transparent pictures, one for each step it takes toward you.
 // Each room's pictures live in their own folder, numbered 0–7,
@@ -168,8 +172,9 @@ function playFrame() {
 function updateRoom(lightOn, radius) {
   let room = currentRoom;
 
-  // creatures get faster with every room you escape
-  let waitFrames = max(22, 55 - escapedCount() * 7);
+  // how long she waits between steps while you're NOT looking at her
+  // (in frames: lower = faster). She also speeds up with every room you escape.
+  let waitFrames = max(CREATURE_WAIT_MIN, CREATURE_WAIT - escapedCount() * 3);
 
   for (let i = creatures.length - 1; i >= 0; i--) {
     let c = creatures[i];
@@ -177,12 +182,11 @@ function updateRoom(lightOn, radius) {
     c.update(justBlinked, waitFrames);
 
     if (c.caughtYou()) {
-      creatures.splice(i, 1); // REMOVE: she got you…
-      creatures.push(new Creature(room)); // ADD: …and another one starts over
-      penalty += 15; // costs you 15 seconds
-      hurtFlash = 200;
-      scareImg = c.currentImage(); // the last picture: right in your face
-      scareTimer = 22;
+      // she got you → GAME OVER: her last picture rushes at you, then the ghost ending
+      scareImg = c.currentImage();
+      gameState = "caught";
+      caughtTimer = 0;
+      return;
     }
   }
 
@@ -335,7 +339,7 @@ function startGame() {
   gameState = "hallway";
 }
 
-// time ran out: the creature comes for you
+// game over (a creature caught you, or time ran out): she comes for you
 function drawCaught() {
   caughtTimer++;
   let img = scareImg || anyCreaturePicture();

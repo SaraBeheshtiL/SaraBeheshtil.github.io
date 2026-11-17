@@ -177,12 +177,11 @@ function updateRoom(lightOn, radius) {
     c.update(justBlinked, waitFrames);
 
     if (c.caughtYou()) {
-      creatures.splice(i, 1); // REMOVE: she got you…
-      creatures.push(new Creature(room)); // ADD: …and another one starts over
-      penalty += 15; // costs you 15 seconds
-      hurtFlash = 200;
-      scareImg = c.currentImage(); // the last picture: right in your face
-      scareTimer = 22;
+      // she got you → GAME OVER: her last picture rushes at you, then the ghost ending
+      scareImg = c.currentImage();
+      gameState = "caught";
+      caughtTimer = 0;
+      return;
     }
   }
 
@@ -335,7 +334,7 @@ function startGame() {
   gameState = "hallway";
 }
 
-// time ran out: the creature comes for you
+// game over (a creature caught you, or time ran out): she comes for you
 function drawCaught() {
   caughtTimer++;
   let img = scareImg || anyCreaturePicture();
